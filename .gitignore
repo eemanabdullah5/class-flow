@@ -1,0 +1,26 @@
+# Secrets — never commit real environment files
+.env
+*.env
+!.env.example
+
+# Local database files
+*.db
+*.sqlite3
+
+# Uploaded student files
+backend/uploads/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / frontend
+node_modules/
+dist/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
