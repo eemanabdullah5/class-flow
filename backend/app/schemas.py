@@ -61,3 +61,39 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class CourseCreate(BaseModel):
+    # "forbid" stops a client from sneaking in fields like teacher_id or join_code.
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, max_length=150)
+    description: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, title: str) -> str:
+        title = title.strip()
+        if not title:
+            raise ValueError("Title cannot be blank.")
+        return title
+
+
+class CourseOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    description: str | None
+    join_code: str
+    teacher_name: str
+
+
+class JoinCourseRequest(BaseModel):
+    join_code: str = Field(min_length=1, max_length=20)
+
+    @field_validator("join_code")
+    @classmethod
+    def tidy_join_code(cls, join_code: str) -> str:
+        # Accept " abc123 " as "ABC123", so small typing differences don't matter.
+        return join_code.strip().upper()

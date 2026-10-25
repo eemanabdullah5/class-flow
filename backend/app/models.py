@@ -68,6 +68,11 @@ class Course(Base):
         back_populates="course", cascade="all, delete-orphan", passive_deletes=True
     )
 
+    @property
+    def teacher_name(self) -> str:
+        """Not a column: read from the linked teacher so API responses can show it."""
+        return self.teacher.full_name
+
 
 class Enrollment(Base):
     """Links a student to a course (many-to-many between users and courses)."""
