@@ -1,17 +1,11 @@
-import os
-from pathlib import Path
-
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-# Where the database lives. Defaults to backend/classflow.db, no matter which
-# folder the server is started from.
-BACKEND_DIR = Path(__file__).resolve().parent.parent
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BACKEND_DIR / 'classflow.db'}")
+from app.config import settings
 
 # check_same_thread=False: FastAPI may use the connection from different threads.
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(settings.database_url, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 
