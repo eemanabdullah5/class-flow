@@ -229,3 +229,25 @@ def test_student_has_only_one_grade_per_assignment(session, setup):
             Grade(assignment_id=assignment.id, student_id=student.id, score=9, graded_by=teacher.id)
         )
         session.commit()
+
+
+# ---------- UTC date-times ----------
+
+
+def test_times_are_saved_and_loaded_as_utc(session, setup):
+    assignment = setup[3]
+    pakistan = timezone(timedelta(hours=5))
+    assignment.due_at = datetime(2030, 1, 1, 23, 59, tzinfo=pakistan)
+    session.commit()
+    session.expire_all()  # force a fresh read from the database
+
+    assert assignment.due_at == datetime(2030, 1, 1, 18, 59, tzinfo=timezone.utc)
+    assert assignment.due_at.tzinfo == timezone.utc
+
+
+def test_time_without_timezone_is_refused(session, setup):
+    assignment = setup[3]
+    assignment.due_at = datetime(2030, 1, 1, 23, 59)  # no timezone
+
+    with pytest.raises(Exception, match="timezone"):
+        session.commit()

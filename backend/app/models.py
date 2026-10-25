@@ -9,6 +9,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    TypeDecorator,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -20,6 +21,30 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+
+class UTCDateTime(TypeDecorator):
+    """A date-time column that is always stored and returned in UTC.
+
+    SQLite has no timezone support: it would silently drop "+05:00" from a time
+    and shift deadlines by hours. This converts every time to UTC before saving
+    and marks it as UTC again when loading.
+    """
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):  # Python -> database
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            raise ValueError("Times must include a timezone, e.g. 2026-11-01T23:59:00Z.")
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+    def process_result_value(self, value, dialect):  # database -> Python
+        if value is None:
+            return None
+        return value.replace(tzinfo=timezone.utc)
 
 
 # Notes for reading this file:
@@ -42,7 +67,7 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(100))
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(20))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now)
 
     courses_taught: Mapped[list["Course"]] = relationship(back_populates="teacher")
     enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="student")
@@ -56,7 +81,7 @@ class Course(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     join_code: Mapped[str] = mapped_column(String(12), unique=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now)
 
     teacher: Mapped["User"] = relationship(back_populates="courses_taught")
     # cascade + passive_deletes: deleting a course removes its enrollments and
@@ -85,7 +110,7 @@ class Enrollment(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"))
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    enrolled_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now)
 
     course: Mapped["Course"] = relationship(back_populates="enrollments")
     student: Mapped["User"] = relationship(back_populates="enrollments")
@@ -105,8 +130,8 @@ class Assignment(Base):
     instructions: Mapped[Optional[str]] = mapped_column(Text)
     category: Mapped[str] = mapped_column(String(20), default="assignment")
     max_points: Mapped[float] = mapped_column(Float)
-    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    due_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now)
 
     course: Mapped["Course"] = relationship(back_populates="assignments")
     submissions: Mapped[list["Submission"]] = relationship(
@@ -141,8 +166,8 @@ class Submission(Base):
     stored_filename: Mapped[str] = mapped_column(String(64), unique=True)  # random name on disk
     content_type: Mapped[str] = mapped_column(String(100))
     file_size: Mapped[int] = mapped_column(Integer)
-    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-    submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    uploaded_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now)
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(UTCDateTime)
 
     assignment: Mapped["Assignment"] = relationship(back_populates="submissions")
     student: Mapped["User"] = relationship()
@@ -163,7 +188,7 @@ class Grade(Base):
     score: Mapped[float] = mapped_column(Float)
     feedback: Mapped[Optional[str]] = mapped_column(Text)
     graded_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    graded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    graded_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now)
 
     assignment: Mapped["Assignment"] = relationship(back_populates="grades")
     # Two foreign keys point at users, so we tell SQLAlchemy which one this link uses.

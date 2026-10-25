@@ -1,4 +1,6 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from datetime import datetime, timezone
+
+from pydantic import AwareDatetime, BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.security import MAX_PASSWORD_BYTES
 
@@ -97,3 +99,76 @@ class JoinCourseRequest(BaseModel):
     def tidy_join_code(cls, join_code: str) -> str:
         # Accept " abc123 " as "ABC123", so small typing differences don't matter.
         return join_code.strip().upper()
+
+
+MAX_ASSIGNMENT_POINTS = 1000
+
+
+def require_future(due_at: datetime) -> datetime:
+    if due_at <= datetime.now(timezone.utc):
+        raise ValueError("Due date must be in the future.")
+    return due_at
+
+
+def strip_required_title(title: str) -> str:
+    title = title.strip()
+    if not title:
+        raise ValueError("Title cannot be blank.")
+    return title
+
+
+class AssignmentCreate(BaseModel):
+    # course_id comes from the URL and category is always "assignment" for now,
+    # so neither may be sent in the body.
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, max_length=150)
+    instructions: str | None = Field(default=None, max_length=5000)
+    max_points: float = Field(gt=0, le=MAX_ASSIGNMENT_POINTS)
+    # AwareDatetime: the time must include a timezone, e.g. "2026-11-01T23:59:00Z"
+    # or "2026-11-02T04:59:00+05:00". A bare "2026-11-01T23:59" is rejected.
+    due_at: AwareDatetime
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, title: str) -> str:
+        return strip_required_title(title)
+
+    @field_validator("due_at")
+    @classmethod
+    def future_due(cls, due_at: datetime) -> datetime:
+        return require_future(due_at)
+
+
+class AssignmentUpdate(BaseModel):
+    """Every field is optional: only the fields that are sent get changed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(default=None, min_length=1, max_length=150)
+    instructions: str | None = Field(default=None, max_length=5000)
+    max_points: float | None = Field(default=None, gt=0, le=MAX_ASSIGNMENT_POINTS)
+    due_at: AwareDatetime | None = None
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, title: str | None) -> str | None:
+        return None if title is None else strip_required_title(title)
+
+    @field_validator("due_at")
+    @classmethod
+    def future_due(cls, due_at: datetime | None) -> datetime | None:
+        return None if due_at is None else require_future(due_at)
+
+
+class AssignmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    course_id: int
+    title: str
+    instructions: str | None
+    category: str
+    max_points: float
+    due_at: datetime
+    created_at: datetime

@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Course, Enrollment, User
+from app.models import Assignment, Course, Enrollment, User
 
 COURSE_NOT_FOUND = "Course not found."
 
@@ -39,3 +39,25 @@ def get_course_for_owner(db: Session, course_id: int, teacher: User) -> Course:
     if course is None or course.teacher_id != teacher.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=COURSE_NOT_FOUND)
     return course
+
+
+ASSIGNMENT_NOT_FOUND = "Assignment not found."
+
+
+def get_assignment_for_member(db: Session, assignment_id: int, user: User) -> Assignment:
+    """The assignment, if the user is the course's teacher or an enrolled student. Otherwise 404."""
+    assignment = db.get(Assignment, assignment_id)
+    if assignment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ASSIGNMENT_NOT_FOUND)
+    course = assignment.course
+    if course.teacher_id != user.id and not is_enrolled(db, course.id, user.id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ASSIGNMENT_NOT_FOUND)
+    return assignment
+
+
+def get_assignment_for_owner(db: Session, assignment_id: int, teacher: User) -> Assignment:
+    """The assignment, if this teacher owns its course. Otherwise 404."""
+    assignment = db.get(Assignment, assignment_id)
+    if assignment is None or assignment.course.teacher_id != teacher.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ASSIGNMENT_NOT_FOUND)
+    return assignment

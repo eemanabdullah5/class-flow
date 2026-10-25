@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.database import create_tables
-from app.routers import auth, courses
+from app.routers import assignments, auth, courses
 
 
 @asynccontextmanager
@@ -16,6 +16,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="ClassFlow API", lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(courses.router)
+app.include_router(assignments.router)
 
 
 @app.get("/api/health")
