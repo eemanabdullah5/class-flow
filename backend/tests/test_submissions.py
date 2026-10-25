@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.models import MAX_UPLOAD_BYTES, Assignment, Course, Enrollment, Grade
+from app.models import MAX_UPLOAD_BYTES, Grade
 from tests.conftest import auth_header
 
 PDF = b"%PDF-1.4\nthis is a pretend homework file\n"
@@ -10,59 +10,26 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"pretend image data"
 EXE = b"MZ\x90\x00" + b"pretend windows program"  # what a real .exe starts with
 
 
-@pytest.fixture
-def world(session, make_user):
-    """A course with an assignment, its teacher, two enrolled students and two outsiders."""
-    teacher = make_user("teacher")
-    student = make_user("student")
-    classmate = make_user("student")
-    course = Course(title="Programming Fundamentals", teacher_id=teacher.id, join_code="PF1234")
-    session.add(course)
-    session.commit()
-    session.add_all(
-        [
-            Enrollment(course_id=course.id, student_id=student.id),
-            Enrollment(course_id=course.id, student_id=classmate.id),
-        ]
-    )
-    assignment = Assignment(
-        course_id=course.id,
-        title="Assignment 1",
-        max_points=20,
-        due_at=datetime.now(timezone.utc) + timedelta(days=7),
-    )
-    session.add(assignment)
-    session.commit()
-    return {
-        "assignment": assignment,
-        "teacher": teacher,
-        "student": student,
-        "classmate": classmate,
-        "other_teacher": make_user("teacher"),
-        "outsider": make_user("student"),
-    }
-
-
-def upload(client, world, user_key="student", filename="homework.pdf", data=PDF):
+def upload(client, classroom, user_key="student", filename="homework.pdf", data=PDF):
     return client.put(
-        f"/api/assignments/{world['assignment'].id}/submission",
+        f"/api/assignments/{classroom['assignment'].id}/submission",
         files={"file": (filename, data, "application/pdf")},
-        headers=auth_header(world[user_key]),
+        headers=auth_header(classroom[user_key]),
     )
 
 
-def action(client, world, name, user_key="student"):
+def action(client, classroom, name, user_key="student"):
     """name is "turn-in" or "unsubmit"."""
     return client.post(
-        f"/api/assignments/{world['assignment'].id}/submission/{name}",
-        headers=auth_header(world[user_key]),
+        f"/api/assignments/{classroom['assignment'].id}/submission/{name}",
+        headers=auth_header(classroom[user_key]),
     )
 
 
-def my_submission(client, world, user_key="student"):
+def my_submission(client, classroom, user_key="student"):
     return client.get(
-        f"/api/assignments/{world['assignment'].id}/my-submission",
-        headers=auth_header(world[user_key]),
+        f"/api/assignments/{classroom['assignment'].id}/my-submission",
+        headers=auth_header(classroom[user_key]),
     )
 
 
@@ -70,13 +37,13 @@ def files_on_disk(upload_dir):
     return sorted(p.name for p in upload_dir.iterdir()) if upload_dir.exists() else []
 
 
-def give_grade(session, world):
+def give_grade(session, classroom):
     session.add(
         Grade(
-            assignment_id=world["assignment"].id,
-            student_id=world["student"].id,
+            assignment_id=classroom["assignment"].id,
+            student_id=classroom["student"].id,
             score=18,
-            graded_by=world["teacher"].id,
+            graded_by=classroom["teacher"].id,
         )
     )
     session.commit()
@@ -85,8 +52,8 @@ def give_grade(session, world):
 # ---------- uploading ----------
 
 
-def test_upload_creates_a_draft_saved_under_a_random_name(client, world, temporary_upload_dir):
-    response = upload(client, world)
+def test_upload_creates_a_draft_saved_under_a_random_name(client, classroom, temporary_upload_dir):
+    response = upload(client, classroom)
 
     assert response.status_code == 200
     body = response.json()
@@ -101,8 +68,8 @@ def test_upload_creates_a_draft_saved_under_a_random_name(client, world, tempora
     assert (temporary_upload_dir / stored).read_bytes() == PDF
 
 
-def test_png_is_accepted(client, world):
-    assert upload(client, world, filename="diagram.PNG", data=PNG).status_code == 200
+def test_png_is_accepted(client, classroom):
+    assert upload(client, classroom, filename="diagram.PNG", data=PNG).status_code == 200
 
 
 @pytest.mark.parametrize(
@@ -117,28 +84,28 @@ def test_png_is_accepted(client, world):
     ],
 )
 def test_bad_files_are_rejected_and_nothing_is_kept(
-    client, world, temporary_upload_dir, filename, data, expected_status
+    client, classroom, temporary_upload_dir, filename, data, expected_status
 ):
-    response = upload(client, world, filename=filename, data=data)
+    response = upload(client, classroom, filename=filename, data=data)
 
     assert response.status_code == expected_status
     assert files_on_disk(temporary_upload_dir) == []
-    assert my_submission(client, world).json() is None
+    assert my_submission(client, classroom).json() is None
 
 
-def test_path_tricks_in_the_filename_are_harmless(client, world, temporary_upload_dir):
-    response = upload(client, world, filename="../../../etc/evil.pdf")
+def test_path_tricks_in_the_filename_are_harmless(client, classroom, temporary_upload_dir):
+    response = upload(client, classroom, filename="../../../etc/evil.pdf")
 
     assert response.status_code == 200
     assert response.json()["original_filename"] == "evil.pdf"
     assert len(files_on_disk(temporary_upload_dir)) == 1  # saved inside the upload folder
 
 
-def test_replacing_a_draft_deletes_the_old_file(client, world, temporary_upload_dir):
-    upload(client, world, filename="first.pdf")
+def test_replacing_a_draft_deletes_the_old_file(client, classroom, temporary_upload_dir):
+    upload(client, classroom, filename="first.pdf")
     [first_stored] = files_on_disk(temporary_upload_dir)
 
-    response = upload(client, world, filename="second.pdf")
+    response = upload(client, classroom, filename="second.pdf")
 
     assert response.json()["original_filename"] == "second.pdf"
     assert files_on_disk(temporary_upload_dir) != [first_stored]
@@ -148,10 +115,10 @@ def test_replacing_a_draft_deletes_the_old_file(client, world, temporary_upload_
 # ---------- mark as done / unsubmit ----------
 
 
-def test_marking_as_done_records_the_time(client, world):
-    upload(client, world)
+def test_marking_as_done_records_the_time(client, classroom):
+    upload(client, classroom)
 
-    response = action(client, world, "turn-in")
+    response = action(client, classroom, "turn-in")
 
     assert response.status_code == 200
     assert response.json()["status"] == "submitted"
@@ -159,86 +126,86 @@ def test_marking_as_done_records_the_time(client, world):
     assert response.json()["is_late"] is False
 
 
-def test_cannot_mark_as_done_without_a_file(client, world):
-    response = action(client, world, "turn-in")
+def test_cannot_mark_as_done_without_a_file(client, classroom):
+    response = action(client, classroom, "turn-in")
 
     assert response.status_code == 409
     assert response.json()["detail"] == "Upload a file before marking the work as done."
 
 
-def test_submitted_file_must_be_unsubmitted_before_replacing(client, world):
-    upload(client, world)
-    action(client, world, "turn-in")
+def test_submitted_file_must_be_unsubmitted_before_replacing(client, classroom):
+    upload(client, classroom)
+    action(client, classroom, "turn-in")
 
-    assert upload(client, world, filename="better.pdf").status_code == 409
+    assert upload(client, classroom, filename="better.pdf").status_code == 409
 
-    unsubmitted = action(client, world, "unsubmit")
+    unsubmitted = action(client, classroom, "unsubmit")
     assert unsubmitted.json()["status"] == "draft"
     assert unsubmitted.json()["submitted_at"] is None
-    assert upload(client, world, filename="better.pdf").status_code == 200
+    assert upload(client, classroom, filename="better.pdf").status_code == 200
 
 
-def test_work_turned_in_after_the_due_date_is_flagged_late(client, session, world):
-    upload(client, world)
-    world["assignment"].due_at = datetime.now(timezone.utc) - timedelta(hours=1)
+def test_work_turned_in_after_the_due_date_is_flagged_late(client, session, classroom):
+    upload(client, classroom)
+    classroom["assignment"].due_at = datetime.now(timezone.utc) - timedelta(hours=1)
     session.commit()
 
-    response = action(client, world, "turn-in")
+    response = action(client, classroom, "turn-in")
 
     assert response.status_code == 200  # late work is still accepted
     assert response.json()["is_late"] is True
 
 
-def test_graded_work_is_locked(client, session, world):
-    upload(client, world)
-    action(client, world, "turn-in")
-    give_grade(session, world)
+def test_graded_work_is_locked(client, session, classroom):
+    upload(client, classroom)
+    action(client, classroom, "turn-in")
+    give_grade(session, classroom)
 
-    assert action(client, world, "unsubmit").status_code == 409
-    assert upload(client, world, filename="sneaky.pdf").status_code == 409
+    assert action(client, classroom, "unsubmit").status_code == 409
+    assert upload(client, classroom, filename="sneaky.pdf").status_code == 409
 
 
 # ---------- who may upload ----------
 
 
-def test_teacher_cannot_upload(client, world):
-    assert upload(client, world, user_key="teacher").status_code == 403
+def test_teacher_cannot_upload(client, classroom):
+    assert upload(client, classroom, user_key="teacher").status_code == 403
 
 
-def test_student_not_in_the_course_gets_404(client, world):
-    assert upload(client, world, user_key="outsider").status_code == 404
-    assert my_submission(client, world, user_key="outsider").status_code == 404
+def test_student_not_in_the_course_gets_404(client, classroom):
+    assert upload(client, classroom, user_key="outsider").status_code == 404
+    assert my_submission(client, classroom, user_key="outsider").status_code == 404
 
 
 # ---------- seeing only your own ----------
 
 
-def test_my_submission_is_null_before_uploading(client, world):
-    response = my_submission(client, world)
+def test_my_submission_is_null_before_uploading(client, classroom):
+    response = my_submission(client, classroom)
 
     assert response.status_code == 200
     assert response.json() is None
 
 
-def test_classmate_does_not_see_my_submission(client, world):
-    upload(client, world)
+def test_classmate_does_not_see_my_submission(client, classroom):
+    upload(client, classroom)
 
-    assert my_submission(client, world, user_key="student").json()["original_filename"] == "homework.pdf"
-    assert my_submission(client, world, user_key="classmate").json() is None
+    assert my_submission(client, classroom, user_key="student").json()["original_filename"] == "homework.pdf"
+    assert my_submission(client, classroom, user_key="classmate").json() is None
 
 
 # ---------- downloading ----------
 
 
-def download(client, world, submission_id, user_key):
-    return client.get(f"/api/submissions/{submission_id}/file", headers=auth_header(world[user_key]))
+def download(client, classroom, submission_id, user_key):
+    return client.get(f"/api/submissions/{submission_id}/file", headers=auth_header(classroom[user_key]))
 
 
 @pytest.mark.parametrize("user_key", ["student", "teacher"])
-def test_owner_and_teacher_can_download_as_an_attachment(client, world, user_key):
-    submission_id = upload(client, world).json()["id"]
+def test_owner_and_teacher_can_download_as_an_attachment(client, classroom, user_key):
+    submission_id = upload(client, classroom).json()["id"]
 
-    response = download(client, world, submission_id, user_key)
+    response = download(client, classroom, submission_id, user_key)
 
     assert response.status_code == 200
     assert response.content == PDF
@@ -249,16 +216,16 @@ def test_owner_and_teacher_can_download_as_an_attachment(client, world, user_key
 
 
 @pytest.mark.parametrize("user_key", ["classmate", "outsider", "other_teacher"])
-def test_nobody_else_can_download(client, world, user_key):
-    submission_id = upload(client, world).json()["id"]
+def test_nobody_else_can_download(client, classroom, user_key):
+    submission_id = upload(client, classroom).json()["id"]
 
-    response = download(client, world, submission_id, user_key)
+    response = download(client, classroom, submission_id, user_key)
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Submission not found."
 
 
-def test_download_requires_login(client, world):
-    submission_id = upload(client, world).json()["id"]
+def test_download_requires_login(client, classroom):
+    submission_id = upload(client, classroom).json()["id"]
 
     assert client.get(f"/api/submissions/{submission_id}/file").status_code == 401

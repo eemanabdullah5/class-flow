@@ -189,3 +189,30 @@ class SubmissionOut(BaseModel):
     uploaded_at: datetime
     submitted_at: datetime | None
     is_late: bool
+
+
+class GradeSet(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # The upper limit depends on the assignment's max_points, so it is checked in the router.
+    score: float = Field(ge=0)
+    feedback: str | None = Field(default=None, max_length=2000)
+
+
+class GradeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    assignment_id: int
+    student_id: int
+    score: float
+    feedback: str | None
+    graded_at: datetime
+
+
+class StudentWorkRow(BaseModel):
+    """One row of the teacher's list: an enrolled student and where their work stands."""
+
+    student: UserOut
+    status: str  # "missing", "draft" or "submitted"
+    submission: SubmissionOut | None
+    grade: GradeOut | None

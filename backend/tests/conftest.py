@@ -87,3 +87,42 @@ def temporary_upload_dir(tmp_path, monkeypatch):
     upload_dir = tmp_path / "uploads"
     monkeypatch.setattr(files, "settings", replace(files.settings, upload_dir=upload_dir))
     return upload_dir
+
+
+@pytest.fixture
+def classroom(session, make_user):
+    """A course with one assignment (due next week), its teacher, two enrolled
+    students, and two outsiders: a teacher and a student from elsewhere."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.models import Assignment, Course, Enrollment
+
+    teacher = make_user("teacher")
+    student = make_user("student")
+    classmate = make_user("student")
+    course = Course(title="Programming Fundamentals", teacher_id=teacher.id, join_code="PF1234")
+    session.add(course)
+    session.commit()
+    session.add_all(
+        [
+            Enrollment(course_id=course.id, student_id=student.id),
+            Enrollment(course_id=course.id, student_id=classmate.id),
+        ]
+    )
+    assignment = Assignment(
+        course_id=course.id,
+        title="Assignment 1",
+        max_points=20,
+        due_at=datetime.now(timezone.utc) + timedelta(days=7),
+    )
+    session.add(assignment)
+    session.commit()
+    return {
+        "course": course,
+        "assignment": assignment,
+        "teacher": teacher,
+        "student": student,
+        "classmate": classmate,
+        "other_teacher": make_user("teacher"),
+        "outsider": make_user("student"),
+    }
