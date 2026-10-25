@@ -172,6 +172,11 @@ class Submission(Base):
     assignment: Mapped["Assignment"] = relationship(back_populates="submissions")
     student: Mapped["User"] = relationship()
 
+    @property
+    def is_late(self) -> bool:
+        """Not a column: worked out each time, so it stays right if the due date changes."""
+        return self.submitted_at is not None and self.submitted_at > self.assignment.due_at
+
 
 class Grade(Base):
     """Kept separate from Submission so offline work (e.g. a midterm) can be graded later."""

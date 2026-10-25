@@ -75,3 +75,15 @@ def auth_header(user):
     from app.security import create_access_token
 
     return {"Authorization": f"Bearer {create_access_token(user.id, user.role)}"}
+
+
+@pytest.fixture(autouse=True)
+def temporary_upload_dir(tmp_path, monkeypatch):
+    """Every test saves uploads in its own temporary folder, never in backend/uploads/."""
+    from dataclasses import replace
+
+    from app.services import files
+
+    upload_dir = tmp_path / "uploads"
+    monkeypatch.setattr(files, "settings", replace(files.settings, upload_dir=upload_dir))
+    return upload_dir

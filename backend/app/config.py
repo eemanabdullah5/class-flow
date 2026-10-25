@@ -19,6 +19,7 @@ class Settings:
     jwt_secret: str
     jwt_expire_minutes: int
     database_url: str
+    upload_dir: Path
 
 
 def load_settings() -> Settings:
@@ -39,11 +40,14 @@ def load_settings() -> Settings:
         raise RuntimeError("JWT_EXPIRE_MINUTES must be greater than 0.")
 
     database_url = os.getenv("DATABASE_URL", f"sqlite:///{BACKEND_DIR / 'classflow.db'}")
+    # Uploaded files live here. It is git-ignored and never served directly.
+    upload_dir = Path(os.getenv("UPLOAD_DIR", str(BACKEND_DIR / "uploads")))
 
     return Settings(
         jwt_secret=secret,
         jwt_expire_minutes=expire_minutes,
         database_url=database_url,
+        upload_dir=upload_dir,
     )
 
 

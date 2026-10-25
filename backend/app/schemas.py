@@ -172,3 +172,20 @@ class AssignmentOut(BaseModel):
     max_points: float
     due_at: datetime
     created_at: datetime
+
+
+class SubmissionOut(BaseModel):
+    """A submission as the API shows it. The random stored filename is never included."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    assignment_id: int
+    student_id: int
+    status: str
+    original_filename: str
+    content_type: str
+    file_size: int
+    uploaded_at: datetime
+    submitted_at: datetime | None
+    is_late: bool
