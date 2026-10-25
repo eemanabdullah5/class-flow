@@ -65,6 +65,13 @@ def test_placeholder_secret_from_example_file_is_too_short(monkeypatch):
         load_settings()
 
 
+def test_placeholder_secret_from_instructions_is_refused_even_though_long(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET", "paste-the-long-random-string-here")
+
+    with pytest.raises(RuntimeError, match="JWT_SECRET"):
+        load_settings()
+
+
 def test_expire_minutes_must_be_a_positive_number(monkeypatch):
     monkeypatch.setenv("JWT_SECRET", "x" * 32)
 

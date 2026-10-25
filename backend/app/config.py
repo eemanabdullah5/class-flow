@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 MIN_SECRET_LENGTH = 32
+# Example values from docs/instructions that must never be used as a real secret.
+PLACEHOLDER_SECRETS = {"change-me", "paste-the-long-random-string-here"}
 
 # Copy values from backend/.env into the environment. Variables that are already
 # set (for example by the tests) are not overwritten.
@@ -22,7 +24,7 @@ class Settings:
 def load_settings() -> Settings:
     """Read settings from the environment and stop with a clear message if any are unsafe."""
     secret = os.getenv("JWT_SECRET", "")
-    if len(secret) < MIN_SECRET_LENGTH:
+    if len(secret) < MIN_SECRET_LENGTH or secret in PLACEHOLDER_SECRETS:
         # Never include the secret itself in an error message.
         raise RuntimeError(
             f"JWT_SECRET must be set to a random value of at least {MIN_SECRET_LENGTH} "
