@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.deps import get_current_user
 from app.models import User
 from app.schemas import LoginRequest, RegisterRequest, TokenResponse, UserOut
 from app.security import create_access_token, hash_password, verify_password
@@ -48,3 +49,9 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
     token = create_access_token(user.id, user.role)
     return TokenResponse(access_token=token, user=UserOut.model_validate(user))
+
+
+@router.get("/me", response_model=UserOut)
+def read_me(user: User = Depends(get_current_user)):
+    """Return the logged-in user. The frontend uses this to restore a session after a refresh."""
+    return user

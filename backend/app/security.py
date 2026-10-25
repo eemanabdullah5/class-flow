@@ -42,6 +42,12 @@ def decode_access_token(token: str) -> dict:
     """Check the signature and expiry, then return the token's contents.
 
     Raises jwt.InvalidTokenError (or a subclass such as ExpiredSignatureError)
-    if the token was changed, signed with another secret, or has expired.
+    if the token was changed, signed with another secret, has expired, or is
+    missing the "exp" or "sub" fields.
     """
-    return jwt.decode(token, settings.jwt_secret, algorithms=[JWT_ALGORITHM])
+    return jwt.decode(
+        token,
+        settings.jwt_secret,
+        algorithms=[JWT_ALGORITHM],
+        options={"require": ["exp", "sub"]},  # a token without an expiry is never accepted
+    )

@@ -45,3 +45,33 @@ def client(session):
     app.dependency_overrides[get_db] = use_test_database
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def make_user(session):
+    """Create a user straight in the test database: make_user("teacher") or make_user("student")."""
+    from app.models import User
+
+    created = 0
+
+    def _make_user(role="student", email=None):
+        nonlocal created
+        created += 1
+        user = User(
+            email=email or f"{role}{created}@example.com",
+            full_name=f"Test {role.title()} {created}",
+            password_hash="not-used-in-these-tests",
+            role=role,
+        )
+        session.add(user)
+        session.commit()
+        return user
+
+    return _make_user
+
+
+def auth_header(user):
+    """The header a logged-in user's browser would send with each request."""
+    from app.security import create_access_token
+
+    return {"Authorization": f"Bearer {create_access_token(user.id, user.role)}"}
