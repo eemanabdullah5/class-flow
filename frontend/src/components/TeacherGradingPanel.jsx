@@ -7,6 +7,7 @@ import EmptyState from "./EmptyState.jsx";
 import ErrorMessage from "./ErrorMessage.jsx";
 import Loading from "./Loading.jsx";
 import StatusBadge, { workStatus } from "./StatusBadge.jsx";
+import UndoGradeButton from "./UndoGradeButton.jsx";
 
 /** One student's row: their status, their file, and a grade form. */
 function GradeRow({ row, assignment, onSaved }) {
@@ -16,6 +17,22 @@ function GradeRow({ row, assignment, onSaved }) {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // When the saved grade changes from outside this form (e.g. an undo), show the new
+  // values. After this form's own save they already match, so nothing is reset.
+  // Compared by value: the list reloads with new objects, and unsaved typing in other rows must stay.
+  const gradeKey = grade ? `${grade.score}|${grade.feedback}|${grade.graded_at}` : "none";
+  const [shownGradeKey, setShownGradeKey] = useState(gradeKey);
+  if (gradeKey !== shownGradeKey) {
+    setShownGradeKey(gradeKey);
+    const newScore = grade ? String(grade.score) : "";
+    const newFeedback = grade?.feedback ?? "";
+    if (newScore !== score || newFeedback !== feedback.trim()) {
+      setScore(newScore);
+      setFeedback(newFeedback);
+      setSaved(false);
+    }
+  }
 
   async function handleSave(event) {
     event.preventDefault();
@@ -131,6 +148,13 @@ export default function TeacherGradingPanel({ assignment }) {
     () => api.get(`/api/assignments/${assignment.id}/submissions`),
     [assignment.id],
   );
+  // Goes up after each saved grade, so the undo preview loads again.
+  const [gradeVersion, setGradeVersion] = useState(0);
+
+  function handleGradeSaved() {
+    reload();
+    setGradeVersion((version) => version + 1);
+  }
 
   if (loading && !rows) return <Loading label="Loading student work…" />;
   if (error) return <ErrorMessage message={error} onRetry={reload} />;
@@ -159,9 +183,10 @@ export default function TeacherGradingPanel({ assignment }) {
         {rows.length} students · {counts.turnedIn} turned in, waiting for a grade · {counts.graded} graded ·{" "}
         {counts.missing} missing
       </p>
+      <UndoGradeButton assignmentId={assignment.id} gradeVersion={gradeVersion} onUndone={reload} />
       <ul className="grade-list">
         {rows.map((row) => (
-          <GradeRow key={row.student.id} row={row} assignment={assignment} onSaved={reload} />
+          <GradeRow key={row.student.id} row={row} assignment={assignment} onSaved={handleGradeSaved} />
         ))}
       </ul>
     </section>

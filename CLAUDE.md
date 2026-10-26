@@ -17,17 +17,18 @@ Avoid unnecessary libraries. Match the existing code style and comment density.
 |---|---|
 | 0 Setup · 1 Database · 2 Auth · 3 Courses · 4 Assignments · 5 Submissions + grading | ✅ done |
 | 6 Frontend (6.1 login · 6.2 routing · 6.3 student pages · 6.4 teacher pages · 6.5 polish) | ✅ done |
-| **7 Grade undo (stack)** | ⏭️ **NEXT, plan approved in principle; confirm with the user before building** |
-| 8 Topic tree, prerequisite graph and cycle detection (2 steps) | todo |
+| 7 Grade undo (stack): 7.1 table · 7.2 `Stack` · 7.3 record changes · 7.4 endpoints · 7.5 undo button | ✅ done |
+| **8 Topic tree, prerequisite graph and cycle detection (2 steps)** | ⏭️ **NEXT, plan it with the user first** |
 | 9 Weighted scores, letter grades, stats, SQL reports (3 steps) | todo |
 | 10 Full workflow test, README, security doc, ER diagram update, demo plan | todo |
 
-Tests at last count: **backend 162 passed**, **frontend 55 passed**. The full teacher → student workflow works end to end.
+Tests at last count: **backend 198 passed**, **frontend 61 passed**. On Windows, backend also shows 2 errors in
+`test_bad_files_are_rejected_and_nothing_is_kept` (the 10 MB test id is too long for an env var; fix with `ids=`; not fixed yet). The full teacher → student workflow works end to end.
 
 **Manual testing is deferred.** The user wants to do all hands-on testing once the app is complete. After each phase, **append its
 checks to `docs/manual-testing.md`** (next free section) instead of asking them to test now. Remind them before Phase 10.
 
-## Phase 7 plan (next)
+## Phase 7: grade undo (done; the decisions behind it)
 
 - New `GradeChange` model/table (`grade_changes`): submission/assignment + student, `teacher_id`, `old_score` (nullable = "no grade"),
   `old_feedback`, `new_score`, `changed_at`, `undone` flag.
@@ -36,9 +37,10 @@ checks to `docs/manual-testing.md`** (next free section) instead of asking them 
 - A pure, separately tested stack logic piece (push/pop/peek, LIFO).
 - `POST /api/grades/undo` (pop the teacher's latest not-undone change and restore the old value; old "no grade" deletes the grade,
   which unlocks the submission) and `GET /api/grades/undo` (preview what undo would do). **One transaction.**
-- Each teacher has their own stack; a teacher can never undo another's change; students get 403. Repeated undo, **no redo**.
-- Frontend: "Undo last grade change" button on the teacher's assignment page with a preview (e.g. "Sara Ahmed: 18 → no grade"),
-  disabled when empty.
+- Each teacher has **one** stack across all their assignments (not per assignment); a teacher can never undo another's change;
+  students get 403. Repeated undo, **no redo**. Empty stack: preview `null`, undo 409.
+- Frontend: `UndoGradeButton` on the teacher's assignment page with a preview (e.g. "Sara Ahmed: 18 → no grade"; names the
+  assignment if it's another one), disabled when empty. `GradeRow` syncs its form when the saved grade's values change.
 - Tests: LIFO order, repeated undo, empty stack, first grade undo deletes the grade and unlocks, cross-teacher isolation, student 403, UI button.
 
 ## Agreed decisions (don't change without asking)
@@ -78,14 +80,14 @@ pip install -r requirements.txt
 copy .env.example .env
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 #   -> paste the output as JWT_SECRET=... in backend\.env, and set DEMO_PASSWORD=something-8-plus
-python -m pytest -q               # expect 162 passed
+python -m pytest -q               # expect 198 passed (+2 Windows-only errors, see above)
 python -m app.seed                # demo accounts + sample course
 uvicorn app.main:app --reload     # http://localhost:8000/docs
 
 # Frontend (second terminal; needs Node.js LTS from nodejs.org)
 cd class-flow\frontend
 npm install
-npm test                          # expect 55 passed
+npm test                          # expect 61 passed
 npm run dev                       # http://localhost:5173
 ```
 
@@ -96,7 +98,7 @@ On macOS/Linux use `python3 -m venv .venv` and `source .venv/bin/activate` inste
 ## Where things are
 
 - `backend/app/`: `main.py`, `config.py`, `database.py`, `models.py`, `schemas.py`, `security.py`, `deps.py` (auth guards),
-  `access.py` (permission checks), `routers/` (auth, courses, assignments, submissions, grades), `services/` (courses, files, grading),
+  `access.py` (permission checks), `routers/` (auth, courses, assignments, submissions, grades), `services/` (courses, files, grading + undo), `stack.py`,
   `seed.py`, `create_teacher.py`
 - `backend/tests/`: `conftest.py` has the shared fixtures: `session`, `client`, `make_user`, `auth_header()`, `classroom`, and a temp upload dir
 - `frontend/src/`: `api/client.js` (the only place that calls fetch), `auth/` (AuthContext, ProtectedRoute), `hooks/` (useApi,

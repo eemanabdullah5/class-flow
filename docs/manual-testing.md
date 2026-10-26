@@ -157,6 +157,23 @@ Full workflow (two browsers, or one normal window plus one private window, so bo
 - [ ] Phone width (Inspect → device toolbar → iPhone SE): navbar fits, forms are full width, grade form fields stack, join code box wraps
 - [ ] macOS System Settings → Accessibility → Display → **Reduce motion** on → the loading spinner stops spinning
 
-## 9. Later phases
+## 9. Grade undo (Phase 7), in the app at :5173
+
+Log in as the teacher and open an assignment where `student1` has turned in work.
+
+- [ ] Nothing graded yet → the blue bar says "No grade changes to undo." and **Undo last grade change** is greyed out
+- [ ] Give the student **12** → the bar shows "Sara Ahmed: 12 → no grade" (with your student's name) and the button works
+- [ ] Change it to **15**, then **18** → the bar shows "18 → 15"
+- [ ] **Undo** → "Undone: … 18 → 15", the score box shows **15**, and the bar now shows "15 → 12"
+- [ ] **Undo** again → score box **12** · **Undo** again → score box empty, badge back to **Turned in**, button greyed out
+- [ ] As the student (second window): after the last undo, refresh → no grade, and **Unsubmit** is back (work unlocked)
+- [ ] Give feedback only (same score, new feedback) → it can be undone; saving the exact same score and feedback again adds nothing to undo
+- [ ] Grade on assignment A, then open assignment B → the bar names assignment A ("… on Assignment A: …"); undo there → A's grade is undone
+- [ ] Refresh the page after an undo → it stays undone (it was saved, not just hidden); there is no redo
+- [ ] Second teacher (`python -m app.create_teacher --email teacher2@example.com --name "Mr. Ali"` in `backend/`):
+      log in as them → "No grade changes to undo." even right after the first teacher graded
+- [ ] In `/docs` as a student: `GET /api/grades/undo` and `POST /api/grades/undo` → **403**; with no login → **401**
+
+## 10. Later phases
 
 Steps are added here as each phase is finished.
