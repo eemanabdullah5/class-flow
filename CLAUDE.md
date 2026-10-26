@@ -18,11 +18,11 @@ Avoid unnecessary libraries. Match the existing code style and comment density.
 | 0 Setup · 1 Database · 2 Auth · 3 Courses · 4 Assignments · 5 Submissions + grading | ✅ done |
 | 6 Frontend (6.1 login · 6.2 routing · 6.3 student pages · 6.4 teacher pages · 6.5 polish) | ✅ done |
 | 7 Grade undo (stack): 7.1 table · 7.2 `Stack` · 7.3 record changes · 7.4 endpoints · 7.5 undo button | ✅ done |
-| **8 Topic tree, prerequisite graph and cycle detection (2 steps)** | ⏭️ **NEXT, plan it with the user first** |
+| 8 Topic tree, prerequisites, cycle detection: **3 steps** · 8.1 topic tree API ✅ · **8.2 prerequisite graph + cycles** · 8.3 frontend pages | ⏭️ **8.2 NEXT, plan it with the user first** |
 | 9 Weighted scores, letter grades, stats, SQL reports (3 steps) | todo |
 | 10 Full workflow test, README, security doc, ER diagram update, demo plan | todo |
 
-Tests at last count: **backend 198 passed**, **frontend 61 passed**. On Windows, backend also shows 2 errors in
+Tests at last count: **backend 245 passed**, **frontend 61 passed**. On Windows, backend also shows 2 errors in
 `test_bad_files_are_rejected_and_nothing_is_kept` (the 10 MB test id is too long for an env var; fix with `ids=`; not fixed yet). The full teacher → student workflow works end to end.
 
 **Manual testing is deferred.** The user wants to do all hands-on testing once the app is complete. After each phase, **append its
@@ -61,6 +61,9 @@ checks to `docs/manual-testing.md`** (next free section) instead of asking them 
   (allowed after); grading locks the submission (no resubmit). Combine items by **points** (sum scores / sum max points).
 - **Grades shown:** absolute grading, **pass = 50%**, show **letter grades** too (scale still to be confirmed with the user in Phase 9).
 - **Missing work counts as 0** after the deadline (for calculations).
+- **Topic tree:** `topics.parent_id` (null = top level), same course only; moving a topic inside itself/its subtopics → 409;
+  deleting a topic deletes its subtopics (cascade); siblings in the order added. Pure helpers in `app/tree.py`.
+  Teacher-only writes (`POST /api/courses/{id}/topics`, `PATCH`/`DELETE /api/topics/{id}`); members read the tree.
 - **Topic prerequisites** between topics within one course (generic `graph.py` so it can be reused); **course prerequisites deferred** (later).
 - The 3 required reports are written as **raw SQL** via SQLAlchemy `text()`.
 
@@ -80,7 +83,7 @@ pip install -r requirements.txt
 copy .env.example .env
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 #   -> paste the output as JWT_SECRET=... in backend\.env, and set DEMO_PASSWORD=something-8-plus
-python -m pytest -q               # expect 198 passed (+2 Windows-only errors, see above)
+python -m pytest -q               # expect 245 passed (+2 Windows-only errors, see above)
 python -m app.seed                # demo accounts + sample course
 uvicorn app.main:app --reload     # http://localhost:8000/docs
 
@@ -98,7 +101,7 @@ On macOS/Linux use `python3 -m venv .venv` and `source .venv/bin/activate` inste
 ## Where things are
 
 - `backend/app/`: `main.py`, `config.py`, `database.py`, `models.py`, `schemas.py`, `security.py`, `deps.py` (auth guards),
-  `access.py` (permission checks), `routers/` (auth, courses, assignments, submissions, grades), `services/` (courses, files, grading + undo), `stack.py`,
+  `access.py` (permission checks), `routers/` (auth, courses, assignments, submissions, grades), `services/` (courses, files, grading + undo), `stack.py`, `tree.py`,
   `seed.py`, `create_teacher.py`
 - `backend/tests/`: `conftest.py` has the shared fixtures: `session`, `client`, `make_user`, `auth_header()`, `classroom`, and a temp upload dir
 - `frontend/src/`: `api/client.js` (the only place that calls fetch), `auth/` (AuthContext, ProtectedRoute), `hooks/` (useApi,

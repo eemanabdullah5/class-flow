@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Assignment, Course, Enrollment, User
+from app.models import Assignment, Course, Enrollment, Topic, User
 
 COURSE_NOT_FOUND = "Course not found."
 
@@ -61,3 +61,14 @@ def get_assignment_for_owner(db: Session, assignment_id: int, teacher: User) -> 
     if assignment is None or assignment.course.teacher_id != teacher.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ASSIGNMENT_NOT_FOUND)
     return assignment
+
+
+TOPIC_NOT_FOUND = "Topic not found."
+
+
+def get_topic_for_owner(db: Session, topic_id: int, teacher: User) -> Topic:
+    """The topic, if this teacher owns its course. Otherwise 404."""
+    topic = db.get(Topic, topic_id)
+    if topic is None or topic.course.teacher_id != teacher.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=TOPIC_NOT_FOUND)
+    return topic

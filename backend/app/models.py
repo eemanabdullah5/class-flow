@@ -92,6 +92,9 @@ class Course(Base):
     assignments: Mapped[list["Assignment"]] = relationship(
         back_populates="course", cascade="all, delete-orphan", passive_deletes=True
     )
+    topics: Mapped[list["Topic"]] = relationship(
+        back_populates="course", cascade="all, delete-orphan", passive_deletes=True
+    )
 
     @property
     def teacher_name(self) -> str:
@@ -201,6 +204,29 @@ class Grade(Base):
     assignment: Mapped["Assignment"] = relationship(back_populates="grades")
     # Two foreign keys point at users, so we tell SQLAlchemy which one this link uses.
     student: Mapped["User"] = relationship(foreign_keys=[student_id])
+
+
+class Topic(Base):
+    """One topic in a course's topic tree, e.g. "Loops" inside "Python basics".
+
+    parent_id points at another topic in the same course; empty means a top-level topic.
+    Deleting a topic deletes its subtopics too, like deleting a folder.
+    """
+
+    __tablename__ = "topics"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("topics.id", ondelete="CASCADE"))
+    title: Mapped[str] = mapped_column(String(150))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now)
+
+    course: Mapped["Course"] = relationship(back_populates="topics")
+    # The topic links to itself, so remote_side tells SQLAlchemy which end is the parent.
+    parent: Mapped[Optional["Topic"]] = relationship(back_populates="children", remote_side=[id])
+    children: Mapped[list["Topic"]] = relationship(
+        back_populates="parent", cascade="all, delete-orphan", passive_deletes=True
+    )
 
 
 class GradeChange(Base):

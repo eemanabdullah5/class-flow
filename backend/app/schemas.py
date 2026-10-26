@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.security import MAX_PASSWORD_BYTES
 
@@ -172,6 +172,58 @@ class AssignmentOut(BaseModel):
     max_points: float
     due_at: datetime
     created_at: datetime
+
+
+class TopicCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, max_length=150)
+    parent_id: int | None = None  # empty = a top-level topic
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, title: str) -> str:
+        return strip_required_title(title)
+
+
+class TopicUpdate(BaseModel):
+    """Rename and/or move. Sending "parent_id": null moves the topic to the top level;
+    leaving parent_id out keeps it where it is."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(default=None, min_length=1, max_length=150)
+    parent_id: int | None = None
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, title: str | None) -> str | None:
+        return None if title is None else strip_required_title(title)
+
+    @model_validator(mode="after")
+    def title_not_null(self):
+        # parent_id may be sent as null (move to top level), but a title can't be removed.
+        if "title" in self.model_fields_set and self.title is None:
+            raise ValueError("Title cannot be blank.")
+        return self
+
+
+class TopicOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    course_id: int
+    parent_id: int | None
+    title: str
+
+
+class TopicNode(BaseModel):
+    """A topic with its subtopics inside it, for showing the whole tree."""
+
+    id: int
+    parent_id: int | None
+    title: str
+    children: list["TopicNode"]
 
 
 class SubmissionOut(BaseModel):

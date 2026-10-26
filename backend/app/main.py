@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.database import create_tables
-from app.routers import assignments, auth, courses, grades, submissions
+from app.routers import assignments, auth, courses, grades, submissions, topics
 
 
 @asynccontextmanager
@@ -19,6 +19,7 @@ app.include_router(courses.router)
 app.include_router(assignments.router)
 app.include_router(submissions.router)
 app.include_router(grades.router)
+app.include_router(topics.router)
 
 
 @app.get("/api/health")

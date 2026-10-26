@@ -17,6 +17,8 @@ erDiagram
     assignments ||--o{ grade_changes : "has"
     users ||--o{ grade_changes : "grade changed (student_id)"
     users ||--o{ grade_changes : "made the change (teacher_id)"
+    courses ||--o{ topics : "has"
+    topics ||--o{ topics : "contains (parent_id)"
 
     users {
         int id PK
@@ -89,6 +91,14 @@ erDiagram
         datetime changed_at
         bool undone "default false"
     }
+
+    topics {
+        int id PK
+        int course_id FK
+        int parent_id FK "empty = top-level topic"
+        string title
+        datetime created_at
+    }
 ```
 
 ## How to read it
@@ -108,12 +118,15 @@ erDiagram
 | grades | UNIQUE(assignment_id, student_id) | One grade per student per assignment |
 | courses → enrollments, assignments | ON DELETE CASCADE | Deleting a course removes its enrollments and assignments |
 | grade_changes | old_score and new_score are 0 or more (old_score may be empty) | No negative scores in the history either |
+| courses → topics, topics → subtopics | ON DELETE CASCADE | Deleting a course removes its topics; deleting a topic removes its subtopics |
 | assignments → submissions, grades, grade_changes | ON DELETE CASCADE | Deleting an assignment removes its submissions, grades and grade history |
 | any FK → users | no cascade | A user who still owns data can't be deleted |
 
 **Many-to-many:** students and courses are linked through `enrollments`. One student can join many courses, and one course has many students.
 
 **Why `grades` is separate from `submissions`:** some work, like an on-campus midterm (added later), gets a grade without any uploaded file.
+
+**The topic tree:** `topics` links to itself. Each topic stores only its parent's id, and the API builds the nested tree from that flat list.
 
 **Why `grade_changes` points at assignment + student, not at `grades.id`:** undoing a first grade deletes the grade row, and a link to a deleted row would break. Each teacher's undo stack is simply their own rows, newest first.
 
@@ -122,9 +135,9 @@ erDiagram
 - A course's `teacher_id` must belong to a user with role `teacher`.
 - Only students enrolled in a course can submit to its assignments.
 - `score` can't be greater than the assignment's `max_points`.
+- A topic's parent must be in the same course, and a topic can't be moved inside itself or one of its own subtopics (no loops).
 - No resubmitting after a grade exists.
 
 ## Tables added later with their features
 
-- `topics`: the course topic tree. `parent_id` points to another topic.
 - `topic_prerequisites`: the prerequisite graph between topics.
