@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 
-from app.models import Assignment, Course, Enrollment, Grade, Submission, User
+from app.models import Assignment, Course, Enrollment, Grade, GradeChange, Submission, User
 
 # ---------- helpers that build valid rows; each test changes one thing ----------
 
@@ -229,6 +229,78 @@ def test_student_has_only_one_grade_per_assignment(session, setup):
             Grade(assignment_id=assignment.id, student_id=student.id, score=9, graded_by=teacher.id)
         )
         session.commit()
+
+
+# ---------- grade changes (undo stack) ----------
+
+
+def new_change(assignment, student, teacher, **changes):
+    fields = dict(
+        assignment_id=assignment.id, student_id=student.id, teacher_id=teacher.id, new_score=8
+    )
+    fields.update(changes)
+    return GradeChange(**fields)
+
+
+def test_first_grade_change_has_no_old_values_and_is_not_undone(session, setup):
+    teacher, student, _, assignment = setup
+    session.add(new_change(assignment, student, teacher))
+    session.commit()
+
+    change = session.scalars(select(GradeChange)).one()
+    assert change.old_score is None  # means "there was no grade before"
+    assert change.old_feedback is None
+    assert change.old_graded_at is None
+    assert change.undone is False
+    assert change.changed_at is not None
+
+
+def test_grade_change_keeps_old_values(session, setup):
+    teacher, student, _, assignment = setup
+    graded_at = datetime(2030, 1, 1, 12, 0, tzinfo=timezone.utc)
+    session.add(
+        new_change(
+            assignment, student, teacher, old_score=6, old_feedback="Good start", old_graded_at=graded_at
+        )
+    )
+    session.commit()
+    session.expire_all()
+
+    change = session.scalars(select(GradeChange)).one()
+    assert (change.old_score, change.old_feedback, change.old_graded_at) == (6, "Good start", graded_at)
+
+
+def test_grade_change_scores_cannot_be_negative(session, setup):
+    teacher, student, _, assignment = setup
+
+    with pytest.raises(IntegrityError):
+        session.add(new_change(assignment, student, teacher, old_score=-1))
+        session.commit()
+    session.rollback()
+
+    with pytest.raises(IntegrityError):
+        session.add(new_change(assignment, student, teacher, new_score=-1))
+        session.commit()
+
+
+def test_grade_change_with_unknown_teacher_is_rejected(session, setup):
+    _, student, _, assignment = setup
+
+    with pytest.raises(IntegrityError):
+        session.add(GradeChange(assignment_id=assignment.id, student_id=student.id, teacher_id=999, new_score=8))
+        session.commit()
+
+
+def test_deleting_assignment_deletes_its_grade_changes(session, setup):
+    teacher, student, _, assignment = setup
+    session.add(new_change(assignment, student, teacher))
+    session.commit()
+
+    session.delete(assignment)
+    session.commit()
+
+    assert count(session, GradeChange) == 0
+    assert count(session, User) == 2
 
 
 # ---------- UTC date-times ----------

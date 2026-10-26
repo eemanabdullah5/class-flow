@@ -140,6 +140,9 @@ class Assignment(Base):
     grades: Mapped[list["Grade"]] = relationship(
         back_populates="assignment", cascade="all, delete-orphan", passive_deletes=True
     )
+    grade_changes: Mapped[list["GradeChange"]] = relationship(
+        back_populates="assignment", cascade="all, delete-orphan", passive_deletes=True
+    )
 
 
 class Submission(Base):
@@ -197,4 +200,34 @@ class Grade(Base):
 
     assignment: Mapped["Assignment"] = relationship(back_populates="grades")
     # Two foreign keys point at users, so we tell SQLAlchemy which one this link uses.
+    student: Mapped["User"] = relationship(foreign_keys=[student_id])
+
+
+class GradeChange(Base):
+    """One entry on a teacher's undo stack: what a grade was before one change.
+
+    Points at assignment + student instead of grades.id, because undoing a first
+    grade deletes the grade row and the link must still work afterwards.
+    The newest row (highest id) that is not undone is the top of the stack.
+    """
+
+    __tablename__ = "grade_changes"
+    __table_args__ = (
+        CheckConstraint("old_score IS NULL OR old_score >= 0", name="ck_grade_changes_old_score"),
+        CheckConstraint("new_score >= 0", name="ck_grade_changes_new_score"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    assignment_id: Mapped[int] = mapped_column(ForeignKey("assignments.id", ondelete="CASCADE"))
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    # All three "old" columns are empty when there was no grade before this change.
+    old_score: Mapped[Optional[float]] = mapped_column(Float)
+    old_feedback: Mapped[Optional[str]] = mapped_column(Text)
+    old_graded_at: Mapped[Optional[datetime]] = mapped_column(UTCDateTime)
+    new_score: Mapped[float] = mapped_column(Float)
+    changed_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now)
+    undone: Mapped[bool] = mapped_column(default=False)  # kept as history, never deleted
+
+    assignment: Mapped["Assignment"] = relationship(back_populates="grade_changes")
     student: Mapped["User"] = relationship(foreign_keys=[student_id])

@@ -14,6 +14,9 @@ erDiagram
     assignments ||--o{ grades : "has"
     users ||--o{ grades : "is graded (student_id)"
     users ||--o{ grades : "grades (graded_by)"
+    assignments ||--o{ grade_changes : "has"
+    users ||--o{ grade_changes : "grade changed (student_id)"
+    users ||--o{ grade_changes : "made the change (teacher_id)"
 
     users {
         int id PK
@@ -73,6 +76,19 @@ erDiagram
         int graded_by FK
         datetime graded_at
     }
+
+    grade_changes {
+        int id PK "newest not-undone row = top of stack"
+        int assignment_id FK
+        int student_id FK
+        int teacher_id FK
+        float old_score "empty = no grade before"
+        text old_feedback "optional"
+        datetime old_graded_at "empty = no grade before"
+        float new_score
+        datetime changed_at
+        bool undone "default false"
+    }
 ```
 
 ## How to read it
@@ -91,12 +107,15 @@ erDiagram
 | submissions | status = 'submitted' needs submitted_at | We always know when work was turned in |
 | grades | UNIQUE(assignment_id, student_id) | One grade per student per assignment |
 | courses → enrollments, assignments | ON DELETE CASCADE | Deleting a course removes its enrollments and assignments |
-| assignments → submissions, grades | ON DELETE CASCADE | Deleting an assignment removes its submissions and grades |
+| grade_changes | old_score and new_score are 0 or more (old_score may be empty) | No negative scores in the history either |
+| assignments → submissions, grades, grade_changes | ON DELETE CASCADE | Deleting an assignment removes its submissions, grades and grade history |
 | any FK → users | no cascade | A user who still owns data can't be deleted |
 
 **Many-to-many:** students and courses are linked through `enrollments`. One student can join many courses, and one course has many students.
 
 **Why `grades` is separate from `submissions`:** some work, like an on-campus midterm (added later), gets a grade without any uploaded file.
+
+**Why `grade_changes` points at assignment + student, not at `grades.id`:** undoing a first grade deletes the grade row, and a link to a deleted row would break. Each teacher's undo stack is simply their own rows, newest first.
 
 ## Checked in code, not in the database
 
@@ -109,4 +128,3 @@ erDiagram
 
 - `topics`: the course topic tree. `parent_id` points to another topic.
 - `topic_prerequisites`: the prerequisite graph between topics.
-- `grade_changes`: the undo stack for grade edits.
