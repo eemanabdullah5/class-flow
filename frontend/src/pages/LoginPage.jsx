@@ -1,15 +1,12 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { Link } from "react-router";
 
 import { useAuth } from "../auth/AuthContext.jsx";
 import ErrorMessage from "../components/ErrorMessage.jsx";
 import FormField from "../components/FormField.jsx";
 
 export default function LoginPage() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const notice = location.state?.notice; // e.g. "Your session has expired..."
+  const { login, notice } = useAuth(); // notice: e.g. "Your session has expired..."
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,8 +27,9 @@ export default function LoginPage() {
 
     setSubmitting(true);
     try {
+      // Once logged in, GuestRoute sends the user to their dashboard
+      // (or back to the page they were trying to open).
       await login(email.trim(), password);
-      navigate("/", { replace: true });
     } catch (err) {
       setError(err.message);
       setSubmitting(false);

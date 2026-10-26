@@ -1,23 +1,25 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
 
 import { api, request, setUnauthorizedHandler, tokenStorage } from "../api/client.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   // If a token is saved from before a refresh, we must ask the backend who it belongs to.
   const [checking, setChecking] = useState(() => Boolean(tokenStorage.get()));
+  // A message for the login page, e.g. "Your session has expired...".
+  const [notice, setNotice] = useState("");
 
   // Any 401 from the backend (expired or invalid token) logs the user out.
+  // We only clear the user: ProtectedRoute then sends them to /login and
+  // remembers which page they were on.
   useEffect(() => {
     setUnauthorizedHandler((message) => {
+      setNotice(message);
       setUser(null);
-      navigate("/login", { replace: true, state: { notice: message } });
     });
-  }, [navigate]);
+  }, []);
 
   // After a page refresh: turn the saved token back into a user.
   useEffect(() => {
@@ -36,6 +38,7 @@ export function AuthProvider({ children }) {
       auth: false,
     });
     tokenStorage.set(result.access_token);
+    setNotice("");
     setUser(result.user);
     return result.user;
   }
@@ -51,12 +54,12 @@ export function AuthProvider({ children }) {
 
   function logout() {
     tokenStorage.clear();
+    setNotice("You have been logged out.");
     setUser(null);
-    navigate("/login", { replace: true, state: { notice: "You have been logged out." } });
   }
 
   return (
-    <AuthContext.Provider value={{ user, checking, login, register, logout }}>
+    <AuthContext.Provider value={{ user, checking, notice, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

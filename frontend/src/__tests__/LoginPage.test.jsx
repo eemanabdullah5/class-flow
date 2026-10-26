@@ -1,30 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { tokenStorage } from "../api/client.js";
-import { AuthProvider } from "../auth/AuthContext.jsx";
-import LoginPage from "../pages/LoginPage.jsx";
-
-function showLoginPage(initialState) {
-  render(
-    <MemoryRouter initialEntries={[{ pathname: "/login", state: initialState }]}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<p>Home page</p>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
-  );
-}
-
-function fakeFetch(status, body) {
-  const fetchMock = vi.fn(async () => new Response(JSON.stringify(body), { status }));
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
+import { STUDENT, fakeBackend, renderApp } from "./helpers.jsx";
 
 async function fillIn(email, password) {
   const user = userEvent.setup();
@@ -35,8 +14,8 @@ async function fillIn(email, password) {
 
 describe("LoginPage", () => {
   it("asks for both fields before sending anything", async () => {
-    const fetchMock = fakeFetch(200, {});
-    showLoginPage();
+    const fetchMock = fakeBackend({});
+    renderApp("/login");
 
     await userEvent.setup().click(screen.getByRole("button", { name: "Log in" }));
 
@@ -46,8 +25,8 @@ describe("LoginPage", () => {
   });
 
   it("shows the backend's message for a wrong password", async () => {
-    fakeFetch(401, { detail: "Invalid email or password." });
-    showLoginPage();
+    fakeBackend({ "POST /api/auth/login": [401, { detail: "Invalid email or password." }] });
+    renderApp("/login");
 
     await fillIn("sara@uni.edu", "wrongpass1");
 
@@ -55,24 +34,16 @@ describe("LoginPage", () => {
     expect(tokenStorage.get()).toBeNull();
   });
 
-  it("saves the token and goes to the home page after logging in", async () => {
-    fakeFetch(200, {
-      access_token: "new.token.value",
-      token_type: "bearer",
-      user: { id: 1, email: "sara@uni.edu", full_name: "Sara Ahmed", role: "student" },
+  it("saves the token and opens the dashboard after logging in", async () => {
+    fakeBackend({
+      "POST /api/auth/login": [200, { access_token: "new.token.value", token_type: "bearer", user: STUDENT }],
+      "GET /api/courses": [200, []],
     });
-    showLoginPage();
+    renderApp("/login");
 
-    await fillIn("sara@uni.edu", "mypassword1");
+    await fillIn(STUDENT.email, "mypassword1");
 
-    expect(await screen.findByText("Home page")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "My courses" })).toBeInTheDocument();
     expect(tokenStorage.get()).toBe("new.token.value");
-  });
-
-  it("shows why the user was sent to the login page", () => {
-    fakeFetch(200, {});
-    showLoginPage({ notice: "Your session has expired. Please log in again." });
-
-    expect(screen.getByText("Your session has expired. Please log in again.")).toBeInTheDocument();
   });
 });

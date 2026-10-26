@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 
 import { useAuth } from "../auth/AuthContext.jsx";
 import ErrorMessage from "../components/ErrorMessage.jsx";
@@ -25,7 +25,6 @@ function validate({ fullName, email, password, confirmPassword }) {
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  const navigate = useNavigate();
 
   const [form, setForm] = useState({ fullName: "", email: "", password: "", confirmPassword: "" });
   const [fieldErrors, setFieldErrors] = useState({});
@@ -45,8 +44,8 @@ export default function RegisterPage() {
 
     setSubmitting(true);
     try {
+      // register() also logs in, and GuestRoute then sends the user to their dashboard.
       await register({ fullName: form.fullName.trim(), email: form.email.trim(), password: form.password });
-      navigate("/", { replace: true });
     } catch (err) {
       setError(err.message);
       setSubmitting(false);

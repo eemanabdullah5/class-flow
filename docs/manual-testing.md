@@ -93,6 +93,18 @@ As **student2**:
 - [ ] Stop uvicorn, try to log in → "Can't reach the server. Is the backend running?"
 - [ ] Inspect → Application → Session Storage shows `classflow_token`; close the tab and reopen → must log in again
 
-## 5. Later phases
+## 5. Routing and page states (Phase 6, step 2), in the app at :5173
+
+- [ ] Log in as **student1** → lands on **My courses**, showing the demo course card
+- [ ] Type `localhost:5173/teacher` in the address bar → sent back to **My courses**
+- [ ] Log in as **teacher** → lands on **Courses I teach**; typing `/student` → sent back
+- [ ] Logged in, open `/login` → sent to your dashboard
+- [ ] Open `/no-such-page` → **Page not found** with a link to the dashboard
+- [ ] Log out, then open `/teacher` → login page; log in as teacher → lands back on `/teacher`
+- [ ] Log in as a brand-new student → empty message "You haven't joined any courses yet."
+- [ ] While on a dashboard, stop uvicorn and refresh → red error box with **Try again**; start uvicorn, click **Try again** → courses load
+- [ ] Session expiry: in `backend/.env` set `JWT_EXPIRE_MINUTES=1`, restart uvicorn, log in, wait 1+ minute, refresh → "Your session has expired. Please log in again." Set it back to `60` afterwards.
+
+## 6. Later phases
 
 Steps are added here as each phase is finished.
