@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext.jsx";
 import { StudentAssignments, TeacherAssignments } from "../components/CourseAssignments.jsx";
 import ErrorMessage from "../components/ErrorMessage.jsx";
 import Loading from "../components/Loading.jsx";
+import { JoinCodeBox, Roster } from "../components/TeacherCourseInfo.jsx";
 import useApi from "../hooks/useApi.js";
 
 // Shared by students and teachers; each sees their own version of the assignment list.
@@ -33,11 +34,19 @@ export default function CoursePage() {
             {course.description && <p className="course-description">{course.description}</p>}
           </header>
 
-          <h2>Assignments</h2>
           {user.role === "student" ? (
-            <StudentAssignments courseId={courseId} />
+            <>
+              <h2>Assignments</h2>
+              <StudentAssignments courseId={courseId} />
+            </>
           ) : (
-            <TeacherAssignments courseId={courseId} />
+            <>
+              <JoinCodeBox code={course.join_code} />
+              <h2>Assignments</h2>
+              <TeacherAssignments courseId={courseId} />
+              <h2>Students</h2>
+              <Roster courseId={courseId} />
+            </>
           )}
         </>
       )}

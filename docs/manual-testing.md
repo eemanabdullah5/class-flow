@@ -125,6 +125,27 @@ As **student2** (or a new student):
 - [ ] An assignment whose due date has passed with nothing turned in → **Missing** badge and a "due date has passed" warning
 - [ ] Phone width: Inspect → device toolbar → iPhone; the pages still fit and stay readable
 
-## 7. Later phases
+## 7. Teacher side (Phase 6, step 4), in the app at :5173
+
+As **teacher**:
+- [ ] Dashboard → **Create course** with an empty title → "Enter a course title."
+- [ ] Create "Object Oriented Programming" → green message with the join code; the card shows "Join code: …"
+- [ ] Open the course → big **join code** with **Copy** (paste somewhere to check), assignment list, **Students** roster
+- [ ] **+ New assignment** with nothing filled in → three red errors; a past due date → "The due date must be in the future."
+- [ ] Create one (title, instructions, 20 points, a date next week at 11:59 PM) → appears in the list showing **your local time**
+- [ ] Open it → **Edit** → change only the title → **Save changes** → title updated, due date unchanged
+- [ ] **Student work** shows every enrolled student; those with nothing show "No file uploaded."
+
+Full workflow (two browsers, or one normal window plus one private window, so both people can be logged in):
+- [ ] Teacher creates a course → student joins with the code → student appears in the roster
+- [ ] Teacher creates an assignment → student sees it as **Assigned**
+- [ ] Student uploads and clicks **Mark as done** → teacher refreshes → **Turned in**, the summary line counts it
+- [ ] Teacher **Download**s the student's file → it opens correctly
+- [ ] Teacher enters **25** → "Enter a score from 0 to 20." · enters **18** + feedback → **Grade saved.**, badge **Graded**
+- [ ] Student refreshes → sees **18 / 20** and the feedback; Unsubmit is gone
+- [ ] Teacher changes it to **19** → **Update grade** → student sees 19
+- [ ] A student with a **Draft** (uploaded, not marked done) before the deadline → teacher's save shows "still a draft…"
+
+## 8. Later phases
 
 Steps are added here as each phase is finished.

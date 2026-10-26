@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link } from "react-router";
 
 import { api } from "../api/client.js";
 import useApi from "../hooks/useApi.js";
 import { formatDateTime } from "../utils/dates.js";
+import AssignmentForm from "./AssignmentForm.jsx";
 import EmptyState from "./EmptyState.jsx";
 import ErrorMessage from "./ErrorMessage.jsx";
 import Loading from "./Loading.jsx";
@@ -50,32 +52,51 @@ export function StudentAssignments({ courseId }) {
   );
 }
 
-/** Teachers: the plain assignment list. Step 6.4 adds creating and editing. */
+/** Teachers: the assignment list plus a "New assignment" form. */
 export function TeacherAssignments({ courseId }) {
+  const [creating, setCreating] = useState(false);
   const { data: assignments, loading, error, reload } = useApi(
     () => api.get(`/api/courses/${courseId}/assignments`),
     [courseId],
   );
 
-  if (loading && !assignments) return <Loading label="Loading assignments…" />;
-  if (error) return <ErrorMessage message={error} onRetry={reload} />;
-  if (assignments.length === 0) {
-    return <EmptyState title="No assignments yet." message="Assignments you create will appear here." />;
+  function handleCreated() {
+    setCreating(false);
+    reload();
   }
 
   return (
-    <ul className="item-list">
-      {assignments.map((assignment) => (
-        <li key={assignment.id}>
-          <Link to={`/assignments/${assignment.id}`} className="item-row">
-            <span className="item-main">
-              <span className="item-title">{assignment.title}</span>
-              <span className="muted">Due {formatDateTime(assignment.due_at)}</span>
-            </span>
-            <span className="muted">{assignment.max_points} points</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <div className="stack">
+      {creating ? (
+        <AssignmentForm courseId={courseId} onSaved={handleCreated} onCancel={() => setCreating(false)} />
+      ) : (
+        <div>
+          <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
+            + New assignment
+          </button>
+        </div>
+      )}
+
+      {loading && !assignments && <Loading label="Loading assignments…" />}
+      <ErrorMessage message={error} onRetry={reload} />
+      {assignments && assignments.length === 0 && (
+        <EmptyState title="No assignments yet." message="Create one so your students have something to work on." />
+      )}
+      {assignments && assignments.length > 0 && (
+        <ul className="item-list">
+          {assignments.map((assignment) => (
+            <li key={assignment.id}>
+              <Link to={`/assignments/${assignment.id}`} className="item-row">
+                <span className="item-main">
+                  <span className="item-title">{assignment.title}</span>
+                  <span className="muted">Due {formatDateTime(assignment.due_at)}</span>
+                </span>
+                <span className="muted">{assignment.max_points} points</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
