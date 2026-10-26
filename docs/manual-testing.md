@@ -105,6 +105,26 @@ As **student2**:
 - [ ] While on a dashboard, stop uvicorn and refresh → red error box with **Try again**; start uvicorn, click **Try again** → courses load
 - [ ] Session expiry: in `backend/.env` set `JWT_EXPIRE_MINUTES=1`, restart uvicorn, log in, wait 1+ minute, refresh → "Your session has expired. Please log in again." Set it back to `60` afterwards.
 
-## 6. Later phases
+## 6. Student side (Phase 6, step 3), in the app at :5173
+
+First, as **teacher** in `/docs`, create an assignment in course 1 (see section 1), so students have something to open.
+
+As **student2** (or a new student):
+- [ ] Dashboard → **Join a course** with a wrong code → red "No course found with that code…"
+- [ ] Join with the real code in lowercase → green "You joined …", the course card appears
+- [ ] Click the course card → blue course header, assignment list with due dates in **your local time** and an **Assigned** badge
+- [ ] Click an assignment → title, due date, points, instructions, **Your work** panel
+- [ ] Choose a `.txt` file → Upload → "File type not allowed…" (nothing sent)
+- [ ] Choose a PDF → **Upload** → file name and size appear, badge **Draft**, "not turned in yet"
+- [ ] Choose another file → **Upload** again → replaces the draft
+- [ ] **Download** → the file saves to your Downloads folder
+- [ ] **Mark as done** → badge **Turned in**, upload box disappears, **Unsubmit** appears
+- [ ] **Unsubmit** → back to **Draft**, "Replace file" box is back
+- [ ] Back to the course → the badge matches
+- [ ] After the teacher grades it (section 3) → the page shows the score (e.g. **18 / 20**), the feedback, and no Upload/Unsubmit buttons
+- [ ] An assignment whose due date has passed with nothing turned in → **Missing** badge and a "due date has passed" warning
+- [ ] Phone width: Inspect → device toolbar → iPhone; the pages still fit and stay readable
+
+## 7. Later phases
 
 Steps are added here as each phase is finished.

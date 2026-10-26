@@ -216,3 +216,12 @@ class StudentWorkRow(BaseModel):
     status: str  # "missing", "draft" or "submitted"
     submission: SubmissionOut | None
     grade: GradeOut | None
+
+
+class MyWorkRow(BaseModel):
+    """One assignment in a course, with where the logged-in student's own work stands."""
+
+    assignment: AssignmentOut
+    submission_status: str  # "none", "draft" or "submitted"
+    is_late: bool
+    grade: GradeOut | None

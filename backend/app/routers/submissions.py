@@ -3,11 +3,11 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.access import get_assignment_for_member
+from app.access import get_assignment_for_member, get_course_for_member
 from app.database import get_db
 from app.deps import get_current_user, require_student
-from app.models import Grade, Submission, User, utc_now
-from app.schemas import SubmissionOut
+from app.models import Assignment, Grade, Submission, User, utc_now
+from app.schemas import MyWorkRow, SubmissionOut
 from app.services.files import UploadRejected, delete_file, save_upload, stored_path
 
 router = APIRouter(tags=["submissions"])
@@ -152,3 +152,45 @@ def download_submission_file(
         filename=submission.original_filename,
         headers={"X-Content-Type-Options": "nosniff"},
     )
+
+
+@router.get("/api/courses/{course_id}/my-work", response_model=list[MyWorkRow])
+def read_my_work(course_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)):
+    """Every assignment in the course with the student's own status and grade, in one request.
+
+    Only ever looks at the logged-in student's rows, so nobody else's work can leak.
+    """
+    get_course_for_member(db, course_id, student)
+    assignments = db.scalars(
+        select(Assignment)
+        .where(Assignment.course_id == course_id)
+        .order_by(Assignment.due_at, Assignment.id)
+    ).all()
+    assignment_ids = [a.id for a in assignments]
+    submissions = {
+        s.assignment_id: s
+        for s in db.scalars(
+            select(Submission).where(
+                Submission.student_id == student.id, Submission.assignment_id.in_(assignment_ids)
+            )
+        )
+    }
+    grades = {
+        g.assignment_id: g
+        for g in db.scalars(
+            select(Grade).where(Grade.student_id == student.id, Grade.assignment_id.in_(assignment_ids))
+        )
+    }
+
+    rows = []
+    for assignment in assignments:
+        submission = submissions.get(assignment.id)
+        rows.append(
+            MyWorkRow(
+                assignment=assignment,
+                submission_status=submission.status if submission else "none",
+                is_late=submission.is_late if submission else False,
+                grade=grades.get(assignment.id),
+            )
+        )
+    return rows

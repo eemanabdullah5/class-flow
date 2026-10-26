@@ -1,14 +1,15 @@
 import { api } from "../api/client.js";
 import CourseList from "../components/CourseList.jsx";
+import JoinCourseForm from "../components/JoinCourseForm.jsx";
 import useApi from "../hooks/useApi.js";
 
-// Step 6.3 adds the "Join a course" box and links into each course.
 export default function StudentDashboard() {
   const { data: courses, loading, error, reload } = useApi(() => api.get("/api/courses"));
 
   return (
-    <main className="page">
+    <main className="page stack">
       <h1>My courses</h1>
+      <JoinCourseForm onJoined={reload} />
       <CourseList
         courses={courses}
         loading={loading}

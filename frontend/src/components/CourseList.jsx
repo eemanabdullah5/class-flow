@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 import EmptyState from "./EmptyState.jsx";
 import ErrorMessage from "./ErrorMessage.jsx";
 import Loading from "./Loading.jsx";
@@ -11,9 +13,11 @@ export default function CourseList({ courses, loading, error, onRetry, emptyTitl
   return (
     <ul className="course-grid">
       {courses.map((course) => (
-        <li key={course.id} className="course-card">
-          <p className="course-title">{course.title}</p>
-          <p className="muted">{course.teacher_name}</p>
+        <li key={course.id}>
+          <Link to={`/courses/${course.id}`} className="course-card">
+            <span className="course-title">{course.title}</span>
+            <span className="muted">{course.teacher_name}</span>
+          </Link>
         </li>
       ))}
     </ul>

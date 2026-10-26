@@ -70,8 +70,9 @@ function errorMessage(data, status) {
  *
  * auth: false is used for login/register, so an old token is never sent
  * and a 401 there just means "wrong password", not "session expired".
+ * asBlob: true returns the raw file instead of JSON (used for downloads).
  */
-export async function request(path, { method = "GET", body, formData, auth = true } = {}) {
+export async function request(path, { method = "GET", body, formData, auth = true, asBlob = false } = {}) {
   const headers = {};
   const token = auth ? tokenStorage.get() : null;
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -90,6 +91,8 @@ export async function request(path, { method = "GET", body, formData, auth = tru
   } catch {
     throw new ApiError("Can't reach the server. Is the backend running?", 0);
   }
+
+  if (response.ok && asBlob) return response.blob();
 
   const text = await response.text();
   let data = null;
@@ -111,9 +114,32 @@ export async function request(path, { method = "GET", body, formData, auth = tru
   return data;
 }
 
+/**
+ * Download a protected file and let the browser save it.
+ * A plain <a href> link can't send our login token, so we fetch the file
+ * ourselves (with the token) and then hand it to the browser.
+ */
+async function download(path, filename) {
+  const blob = await request(path, { asBlob: true });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   get: (path) => request(path),
   post: (path, body) => request(path, { method: "POST", body }),
   put: (path, body) => request(path, { method: "PUT", body }),
   patch: (path, body) => request(path, { method: "PATCH", body }),
+  upload: (path, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request(path, { method: "PUT", formData });
+  },
+  download,
 };

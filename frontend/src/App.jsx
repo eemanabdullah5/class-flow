@@ -4,6 +4,8 @@ import { useAuth } from "./auth/AuthContext.jsx";
 import ProtectedRoute, { GuestRoute, RoleHome } from "./auth/ProtectedRoute.jsx";
 import Loading from "./components/Loading.jsx";
 import NavBar from "./components/NavBar.jsx";
+import AssignmentPage from "./pages/AssignmentPage.jsx";
+import CoursePage from "./pages/CoursePage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
@@ -35,6 +37,9 @@ export default function App() {
         {/* Any logged-in user */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<RoleHome />} />
+          {/* Shared pages: the backend decides what each person may see */}
+          <Route path="/courses/:courseId" element={<CoursePage />} />
+          <Route path="/assignments/:assignmentId" element={<AssignmentPage />} />
         </Route>
 
         {/* Students only */}

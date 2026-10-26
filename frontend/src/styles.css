@@ -272,6 +272,236 @@ a {
   margin: 0;
 }
 
+/* ---------- page building blocks ---------- */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.small {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.back-link {
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.course-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.course-card:hover,
+.item-row:hover {
+  box-shadow: 0 1px 4px rgba(60, 64, 67, 0.25);
+}
+
+.course-header {
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+
+.course-header h1,
+.course-header p {
+  margin: 0;
+}
+
+.course-description {
+  margin-top: var(--space-2) !important;
+  opacity: 0.9;
+}
+
+.instructions {
+  white-space: pre-wrap; /* keep the teacher's line breaks */
+  margin-bottom: 0;
+}
+
+/* ---------- inline forms (join a course) ---------- */
+
+.inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.inline-form-label {
+  font-weight: 600;
+}
+
+.inline-form-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.inline-form-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font: inherit;
+  text-transform: uppercase;
+}
+
+.alert-success {
+  background: #e6f4ea;
+  color: var(--color-success);
+}
+
+.alert-warning {
+  background: #fef7e0;
+  color: var(--color-warning);
+}
+
+/* ---------- assignment lists ---------- */
+
+.item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+}
+
+.item-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-title {
+  font-weight: 600;
+}
+
+.item-side {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.score {
+  font-weight: 600;
+}
+
+/* ---------- status badges ---------- */
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-assigned {
+  background: var(--color-background);
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+}
+
+.badge-draft {
+  background: #fef7e0;
+  color: var(--color-warning);
+}
+
+.badge-submitted,
+.badge-graded {
+  background: #e6f4ea;
+  color: var(--color-success);
+}
+
+.badge-late {
+  background: #fef7e0;
+  color: var(--color-warning);
+}
+
+.badge-missing {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+/* ---------- the student's work panel ---------- */
+
+.work-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.upload-form label {
+  font-weight: 500;
+}
+
+.grade-box {
+  padding: var(--space-3);
+  background: #e6f4ea;
+  border-radius: var(--radius);
+}
+
+.grade-box p {
+  margin: 0;
+}
+
+.grade-score {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.grade-feedback {
+  margin: var(--space-1) 0 !important;
+  font-style: italic;
+}
+
 /* ---------- small screens ---------- */
 
 @media (max-width: 600px) {
@@ -282,5 +512,11 @@ a {
   .navbar-user {
     gap: var(--space-2);
     font-size: 0.9rem;
+  }
+
+  .item-row,
+  .file-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
