@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { api } from "../api/client.js";
+import { CATEGORIES } from "../utils/categories.js";
 import { localInputToIso, toLocalInputValue } from "../utils/dates.js";
 import ErrorMessage from "./ErrorMessage.jsx";
 import FormField from "./FormField.jsx";
@@ -27,6 +28,7 @@ function validate(form) {
 export default function AssignmentForm({ courseId, existing, onSaved, onCancel }) {
   const [form, setForm] = useState({
     title: existing?.title ?? "",
+    category: existing?.category ?? "assignment",
     instructions: existing?.instructions ?? "",
     maxPoints: existing ? String(existing.max_points) : "",
     dueAt: existing ? toLocalInputValue(existing.due_at) : "",
@@ -42,6 +44,7 @@ export default function AssignmentForm({ courseId, existing, onSaved, onCancel }
   function changedFields() {
     const all = {
       title: form.title.trim(),
+      category: form.category,
       instructions: form.instructions.trim() || null,
       max_points: Number(form.maxPoints),
       due_at: form.dueAt,
@@ -50,6 +53,7 @@ export default function AssignmentForm({ courseId, existing, onSaved, onCancel }
 
     const changes = {};
     if (all.title !== existing.title) changes.title = all.title;
+    if (all.category !== existing.category) changes.category = all.category;
     if (all.instructions !== (existing.instructions || null)) changes.instructions = all.instructions;
     if (all.max_points !== existing.max_points) changes.max_points = all.max_points;
     if (form.dueAt !== toLocalInputValue(existing.due_at)) changes.due_at = localInputToIso(form.dueAt);
@@ -94,6 +98,16 @@ export default function AssignmentForm({ courseId, existing, onSaved, onCancel }
         onChange={update("title")}
         error={fieldErrors.title}
       />
+      <div className="field">
+        <label htmlFor="assignment-category">Category</label>
+        <select id="assignment-category" value={form.category} onChange={update("category")}>
+          {CATEGORIES.map((c) => (
+            <option key={c.key} value={c.key}>
+              {c.label} ({c.weight}% of the course{c.inClass ? ", taken in class" : ""})
+            </option>
+          ))}
+        </select>
+      </div>
       <FormField
         id="assignment-instructions"
         label="Instructions (optional)"

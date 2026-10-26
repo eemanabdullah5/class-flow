@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
@@ -110,6 +111,13 @@ def require_future(due_at: datetime) -> datetime:
     return due_at
 
 
+def reject_nulls(model: BaseModel, fields: list[str]) -> None:
+    """For edit (PATCH) bodies: a field may be left out, but a required one can't be sent as null."""
+    for field in fields:
+        if field in model.model_fields_set and getattr(model, field) is None:
+            raise ValueError(f"{field.replace('_', ' ').capitalize()} cannot be empty.")
+
+
 def strip_required_title(title: str) -> str:
     title = title.strip()
     if not title:
@@ -117,12 +125,16 @@ def strip_required_title(title: str) -> str:
     return title
 
 
+# quiz 10% · assignment 10% · midterm 30% (in class, no upload) · project 50%; see app/scoring.py
+Category = Literal["quiz", "assignment", "midterm", "project"]
+
+
 class AssignmentCreate(BaseModel):
-    # course_id comes from the URL and category is always "assignment" for now,
-    # so neither may be sent in the body.
+    # course_id comes from the URL, so it may not be sent in the body.
     model_config = ConfigDict(extra="forbid")
 
     title: str = Field(min_length=1, max_length=150)
+    category: Category = "assignment"
     instructions: str | None = Field(default=None, max_length=5000)
     max_points: float = Field(gt=0, le=MAX_ASSIGNMENT_POINTS)
     # AwareDatetime: the time must include a timezone, e.g. "2026-11-01T23:59:00Z"
@@ -146,6 +158,7 @@ class AssignmentUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = Field(default=None, min_length=1, max_length=150)
+    category: Category | None = None
     instructions: str | None = Field(default=None, max_length=5000)
     max_points: float | None = Field(default=None, gt=0, le=MAX_ASSIGNMENT_POINTS)
     due_at: AwareDatetime | None = None
@@ -159,6 +172,12 @@ class AssignmentUpdate(BaseModel):
     @classmethod
     def future_due(cls, due_at: datetime | None) -> datetime | None:
         return None if due_at is None else require_future(due_at)
+
+    @model_validator(mode="after")
+    def required_fields_not_null(self):
+        # instructions may be cleared with null; the others are required.
+        reject_nulls(self, ["title", "category", "max_points", "due_at"])
+        return self
 
 
 class AssignmentOut(BaseModel):
@@ -203,8 +222,7 @@ class TopicUpdate(BaseModel):
     @model_validator(mode="after")
     def title_not_null(self):
         # parent_id may be sent as null (move to top level), but a title can't be removed.
-        if "title" in self.model_fields_set and self.title is None:
-            raise ValueError("Title cannot be blank.")
+        reject_nulls(self, ["title"])
         return self
 
 
@@ -223,7 +241,28 @@ class TopicNode(BaseModel):
     id: int
     parent_id: int | None
     title: str
+    prerequisite_ids: list[int]  # topics to learn before this one
     children: list["TopicNode"]
+
+
+class PrerequisiteAdd(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prerequisite_id: int
+
+
+class TopicPrerequisites(BaseModel):
+    topic_id: int
+    prerequisite_ids: list[int]
+
+
+class StudyOrderItem(BaseModel):
+    """One topic in the suggested study order: every prerequisite comes earlier in the list."""
+
+    id: int
+    parent_id: int | None
+    title: str
+    prerequisite_ids: list[int]
 
 
 class SubmissionOut(BaseModel):
@@ -288,3 +327,89 @@ class MyWorkRow(BaseModel):
     submission_status: str  # "none", "draft" or "submitted"
     is_late: bool
     grade: GradeOut | None
+
+
+# ---------- results, stats and reports (Phase 9) ----------
+
+
+class CategoryResult(BaseModel):
+    category: str
+    weight: int  # percent of the course result
+    earned: float | None  # None: nothing in this category counts yet
+    possible: float | None
+    percentage: float | None
+
+
+class CourseResult(BaseModel):
+    """None everywhere means nothing counts yet (no grades, nothing missing)."""
+
+    percentage: float | None
+    letter: str | None
+    passed: bool | None
+    categories: list[CategoryResult]
+
+
+class StudentResultRow(BaseModel):
+    student: UserOut
+    result: CourseResult
+
+
+class ClassStats(BaseModel):
+    """Over students who have a result. All None (except count) when nobody has one yet."""
+
+    count: int
+    mean: float | None
+    minimum: float | None
+    maximum: float | None
+    variance: float | None  # population variance of the percentages
+    pass_proportion: float | None  # 0.0 to 1.0
+
+
+class LetterBand(BaseModel):
+    lowest: float  # lowest percent that gets this letter
+    letter: str
+
+
+class ClassResults(BaseModel):
+    pass_percent: int
+    letter_scale: list[LetterBand]  # highest letter first
+    students: list[StudentResultRow]
+    stats: ClassStats
+
+
+class AssignmentReportRow(BaseModel):
+    id: int
+    title: str
+    category: str
+    max_points: float
+    due_at: datetime
+    enrolled: int
+    turned_in: int
+    late: int
+    missing: int | None  # None for in-class work (nothing to hand in)
+    graded: int
+    average_score: float | None
+    lowest_score: float | None
+    highest_score: float | None
+
+
+class StudentReportRow(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    turned_in: int
+    late: int
+    graded: int
+    points_earned: float
+    points_possible: float  # max points of the graded work only
+
+
+class MissingLateRow(BaseModel):
+    student_id: int
+    student_name: str
+    assignment_id: int
+    assignment_title: str
+    category: str
+    due_at: datetime
+    submitted_at: datetime | None
+    problem: Literal["missing", "late"]

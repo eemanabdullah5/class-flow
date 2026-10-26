@@ -107,10 +107,30 @@ describe("course page (teacher)", () => {
     expect(await screen.findByRole("link", { name: /Calculator/ })).toBeInTheDocument();
     expect(bodyOf(fetchMock, "POST", "/api/courses/1/assignments")).toEqual({
       title: "Calculator",
+      category: "assignment", // the default
       instructions: null,
       max_points: 20,
       due_at: localInputToIso("2099-11-30T23:59"),
     });
+  });
+
+  it("sends the chosen category", async () => {
+    const fetchMock = courseBackend();
+    renderApp("/courses/1", { loggedInAs: TEACHER });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "+ New assignment" }));
+    await user.type(screen.getByLabelText("Title"), "Midterm");
+    await user.selectOptions(screen.getByLabelText("Category"), "midterm");
+    expect(screen.getByRole("option", { name: "Midterm (30% of the course, taken in class)" }).selected).toBe(true);
+    await user.type(screen.getByLabelText("Max points"), "50");
+    fireEvent.change(screen.getByLabelText("Due date (your local time)"), {
+      target: { value: "2099-11-30T09:00" },
+    });
+    await user.click(screen.getByRole("button", { name: "Create assignment" }));
+
+    await screen.findByRole("link", { name: /Midterm/ });
+    expect(bodyOf(fetchMock, "POST", "/api/courses/1/assignments").category).toBe("midterm");
   });
 
   it("checks the assignment form before sending", async () => {

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 
 import { api } from "../api/client.js";
 import useApi from "../hooks/useApi.js";
+import { isInClass } from "../utils/categories.js";
 import { formatDateTime, isPast } from "../utils/dates.js";
 import { ACCEPT_ATTRIBUTE, checkFile, formatFileSize } from "../utils/files.js";
 import ErrorMessage from "./ErrorMessage.jsx";
@@ -68,6 +69,28 @@ export default function StudentWorkPanel({ assignment }) {
   }
   if (submission.error || grade.error) {
     return <ErrorMessage message={submission.error || grade.error} onRetry={submission.reload} />;
+  }
+
+  // In-class work (a midterm): nothing to upload, just the mark once the teacher enters it.
+  if (isInClass(assignment.category)) {
+    return (
+      <section className="card stack work-panel" aria-labelledby="your-work">
+        <div className="work-header">
+          <h2 id="your-work">Your mark</h2>
+          <StatusBadge grade={myGrade} dueAt={assignment.due_at} inClass />
+        </div>
+        {myGrade ? (
+          <div className="grade-box">
+            <p className="grade-score">
+              {myGrade.score} / {assignment.max_points}
+            </p>
+            {myGrade.feedback && <p className="grade-feedback">“{myGrade.feedback}”</p>}
+          </div>
+        ) : (
+          <p className="muted">This is taken in class, so there is nothing to upload. Your teacher will enter your mark here.</p>
+        )}
+      </section>
+    );
   }
 
   const canUpload = !myGrade && (!work || work.status === "draft");

@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { api } from "../api/client.js";
 import useApi from "../hooks/useApi.js";
+import { isInClass } from "../utils/categories.js";
 import { formatDateTime } from "../utils/dates.js";
 import EmptyState from "./EmptyState.jsx";
 import ErrorMessage from "./ErrorMessage.jsx";
@@ -84,10 +85,13 @@ function GradeRow({ row, assignment, onSaved }) {
           isLate={submission?.is_late}
           grade={grade}
           dueAt={assignment.due_at}
+          inClass={isInClass(assignment.category)}
         />
       </div>
 
-      {submission ? (
+      {isInClass(assignment.category) ? (
+        <p className="muted small">Taken in class: enter the mark below.</p>
+      ) : submission ? (
         <div className="file-row">
           <span>
             {submission.original_filename}
@@ -170,6 +174,7 @@ export default function TeacherGradingPanel({ assignment }) {
       isLate: row.submission?.is_late,
       grade: row.grade,
       dueAt: assignment.due_at,
+      inClass: isInClass(assignment.category),
     });
     if (key === "graded") counts.graded += 1;
     if (key === "submitted" || key === "late") counts.turnedIn += 1;

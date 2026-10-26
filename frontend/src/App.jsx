@@ -9,8 +9,10 @@ import CoursePage from "./pages/CoursePage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import ResultsPage from "./pages/ResultsPage.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
 import TeacherDashboard from "./pages/TeacherDashboard.jsx";
+import TopicsPage from "./pages/TopicsPage.jsx";
 
 export default function App() {
   const { checking } = useAuth();
@@ -41,6 +43,7 @@ export default function App() {
             <Route path="/" element={<RoleHome />} />
             {/* Shared pages: the backend decides what each person may see */}
             <Route path="/courses/:courseId" element={<CoursePage />} />
+            <Route path="/courses/:courseId/topics" element={<TopicsPage />} />
             <Route path="/assignments/:assignmentId" element={<AssignmentPage />} />
           </Route>
 
@@ -52,6 +55,7 @@ export default function App() {
           {/* Teachers only */}
           <Route element={<ProtectedRoute role="teacher" />}>
             <Route path="/teacher" element={<TeacherDashboard />} />
+            <Route path="/courses/:courseId/results" element={<ResultsPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

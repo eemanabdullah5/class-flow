@@ -10,8 +10,9 @@ from app.access import (
 )
 from app.database import get_db
 from app.deps import get_current_user, require_teacher
-from app.models import Assignment, Grade, User
+from app.models import Assignment, Grade, Submission, User
 from app.schemas import AssignmentCreate, AssignmentOut, AssignmentUpdate
+from app.scoring import OFFLINE_CATEGORIES
 
 router = APIRouter(tags=["assignments"])
 
@@ -77,6 +78,15 @@ def update_assignment(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Max points can't be lower than an existing grade ({highest_score:g}).",
+            )
+
+    # In-class work (a midterm) has no uploads, so it can't take over files already handed in.
+    if changes.get("category") in OFFLINE_CATEGORIES and assignment.category not in OFFLINE_CATEGORIES:
+        has_files = db.scalar(select(func.count()).where(Submission.assignment_id == assignment_id))
+        if has_files:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Students have already uploaded work, so this can't become in-class work.",
             )
 
     for field, value in changes.items():

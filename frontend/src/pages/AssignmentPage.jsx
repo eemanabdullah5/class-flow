@@ -10,6 +10,7 @@ import StudentWorkPanel from "../components/StudentWorkPanel.jsx";
 import TeacherGradingPanel from "../components/TeacherGradingPanel.jsx";
 import useApi from "../hooks/useApi.js";
 import useDocumentTitle from "../hooks/useDocumentTitle.js";
+import { categoryInfo, isInClass } from "../utils/categories.js";
 import { formatDateTime } from "../utils/dates.js";
 
 // Shared by students and teachers. Students get their own "Your work" panel;
@@ -70,7 +71,8 @@ export default function AssignmentPage() {
             )}
           </div>
           <p className="muted">
-            Due {formatDateTime(assignment.due_at)} · {assignment.max_points} points
+            {categoryInfo(assignment.category).label} · {isInClass(assignment.category) ? "In class" : "Due"}{" "}
+            {formatDateTime(assignment.due_at)} · {assignment.max_points} points
           </p>
           {assignment.instructions && <p className="instructions">{assignment.instructions}</p>}
         </header>

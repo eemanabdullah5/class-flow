@@ -18,12 +18,11 @@ Avoid unnecessary libraries. Match the existing code style and comment density.
 | 0 Setup · 1 Database · 2 Auth · 3 Courses · 4 Assignments · 5 Submissions + grading | ✅ done |
 | 6 Frontend (6.1 login · 6.2 routing · 6.3 student pages · 6.4 teacher pages · 6.5 polish) | ✅ done |
 | 7 Grade undo (stack): 7.1 table · 7.2 `Stack` · 7.3 record changes · 7.4 endpoints · 7.5 undo button | ✅ done |
-| 8 Topic tree, prerequisites, cycle detection: **3 steps** · 8.1 topic tree API ✅ · **8.2 prerequisite graph + cycles** · 8.3 frontend pages | ⏭️ **8.2 NEXT, plan it with the user first** |
-| 9 Weighted scores, letter grades, stats, SQL reports (3 steps) | todo |
-| 10 Full workflow test, README, security doc, ER diagram update, demo plan | todo |
+| 8 Topic tree, prerequisites, cycle detection: 8.1 topic tree API · 8.2 prerequisite graph + cycles · 8.3 Topics page | ✅ done |
+| 9 Weighted scores · letter grades + stats · 3 SQL reports, plus Results page and "My result" card | ✅ done (**letter scale and the 3 reports are Claude's defaults: user to confirm against their brief**) |
+| **10 Full workflow test, README, security doc, ER diagram update, demo plan** | ⏭️ **NEXT: first remind the user to do the manual testing in `docs/manual-testing.md`** |
 
-Tests at last count: **backend 245 passed**, **frontend 61 passed**. On Windows, backend also shows 2 errors in
-`test_bad_files_are_rejected_and_nothing_is_kept` (the 10 MB test id is too long for an env var; fix with `ids=`; not fixed yet). The full teacher → student workflow works end to end.
+Tests at last count: **backend 379 passed**, **frontend 102 passed**. The full teacher → student workflow works end to end.
 
 **Manual testing is deferred.** The user wants to do all hands-on testing once the app is complete. After each phase, **append its
 checks to `docs/manual-testing.md`** (next free section) instead of asking them to test now. Remind them before Phase 10.
@@ -52,20 +51,35 @@ checks to `docs/manual-testing.md`** (next free section) instead of asking them 
 - **Permissions:** outsiders get **404** (not 403) for courses/assignments/submissions they aren't part of; wrong role gets 403.
   Shared checks live in `app/access.py`. Student endpoints never take a student id (always from the token).
 - **Courses:** join by 6-char code (no 0/O/1/I); one teacher per course.
-- **Assignments:** MVP category is only `"assignment"` (100%). Later: quiz 10 / assignment 10 / midterm 30 / project 50, **fixed** weights.
-  Midterm will be offline (teacher enters marks, no upload). All times are UTC (`UTCDateTime` column type); the API requires timezone-aware datetimes.
+- **Assignments:** category quiz 10 / assignment 10 / midterm 30 / project 50, **fixed** weights (`app/scoring.py`, mirrored in
+  `frontend/src/utils/categories.js`). Midterm is in class: upload/turn-in → 409, can be graded any time, and work with uploads
+  can't be switched to midterm (409). All times are UTC (`UTCDateTime` column type); the API requires timezone-aware datetimes.
 - **Submissions:** one file per submission; upload (draft) → "mark as done" (submitted) → unsubmit allowed until graded; late allowed and
   flagged (`is_late` computed). Files: PDF/DOCX/ZIP/PNG/JPG, ≤10 MB, extension **and** magic bytes checked, random stored names in
   `backend/uploads/` (git-ignored), download only via a permission-checked endpoint with `Content-Disposition: attachment` + `nosniff`.
 - **Grading:** separate `grades` table; score 0..max_points; missing work can be given 0; drafts can't be graded **before** the due date
   (allowed after); grading locks the submission (no resubmit). Combine items by **points** (sum scores / sum max points).
-- **Grades shown:** absolute grading, **pass = 50%**, show **letter grades** too (scale still to be confirmed with the user in Phase 9).
-- **Missing work counts as 0** after the deadline (for calculations).
+- **Grades shown:** absolute grading, **pass = 50%**; letters A 80+ · B 70+ · C 60+ · D 50+ · F below 50 (`LETTER_SCALE` in
+  `app/scoring.py`; a default, not yet confirmed by the user). Percent rounded to 1 decimal first; letter/pass use the rounded value.
+- **Missing work counts as 0** after the deadline (no submission, or only a draft). Handed in but ungraded → not counted yet;
+  ungraded midterm → not counted. A category with nothing counted is left out and the other weights scale up.
+- **Results:** `GET /api/courses/{id}/my-result` (student), `GET /api/courses/{id}/results` (teacher: each student + stats from
+  `app/stats.py`: count, mean, min, max, population variance, pass proportion, over students who have a result). Not stored.
 - **Topic tree:** `topics.parent_id` (null = top level), same course only; moving a topic inside itself/its subtopics → 409;
   deleting a topic deletes its subtopics (cascade); siblings in the order added. Pure helpers in `app/tree.py`.
   Teacher-only writes (`POST /api/courses/{id}/topics`, `PATCH`/`DELETE /api/topics/{id}`); members read the tree.
+- **Topic prerequisites:** `topic_prerequisites` (topic_id needs prerequisite_id first), same course only; self → 422,
+  duplicate → 409, loop → 409 with the chain ('That would make a loop: "A" needs "B" needs "A".'). The tree includes
+  `prerequisite_ids`; `GET /api/courses/{id}/topics/study-order` gives a topological order (ties = order added).
+  Generic `app/graph.py` (find_path, would_create_cycle, find_cycle, dependency_order).
+- **Topics page:** `/courses/:id/topics` (linked from the course page), shared; teacher edits inline (`TopicTree` → `TopicEditor`),
+  dropdowns hide impossible moves but loops are left to the backend so its message is shown; delete asks `window.confirm`.
 - **Topic prerequisites** between topics within one course (generic `graph.py` so it can be reused); **course prerequisites deferred** (later).
-- The 3 required reports are written as **raw SQL** via SQLAlchemy `text()`.
+- The 3 reports are **raw SQL** via `text()` in `app/routers/reports.py` (teacher only, `/api/courses/{id}/reports/...`):
+  `assignments` (per assignment: turned in, late, missing, graded, avg/min/max), `students` (per student: turned in, late, graded,
+  raw points of graded work), `missing-late` (past-due missing or late work). Chosen by Claude; **confirm with the user's brief**.
+- **Databases made before Phase 9** still have the old category CHECK (`create_all()` doesn't alter tables): delete `classflow.db`
+  and re-seed (noted in `docs/manual-testing.md` setup).
 
 ## Run it (Windows, first time on a new machine)
 
@@ -83,14 +97,14 @@ pip install -r requirements.txt
 copy .env.example .env
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 #   -> paste the output as JWT_SECRET=... in backend\.env, and set DEMO_PASSWORD=something-8-plus
-python -m pytest -q               # expect 245 passed (+2 Windows-only errors, see above)
+python -m pytest -q               # expect 379 passed
 python -m app.seed                # demo accounts + sample course
 uvicorn app.main:app --reload     # http://localhost:8000/docs
 
 # Frontend (second terminal; needs Node.js LTS from nodejs.org)
 cd class-flow\frontend
 npm install
-npm test                          # expect 61 passed
+npm test                          # expect 102 passed
 npm run dev                       # http://localhost:5173
 ```
 
@@ -101,7 +115,7 @@ On macOS/Linux use `python3 -m venv .venv` and `source .venv/bin/activate` inste
 ## Where things are
 
 - `backend/app/`: `main.py`, `config.py`, `database.py`, `models.py`, `schemas.py`, `security.py`, `deps.py` (auth guards),
-  `access.py` (permission checks), `routers/` (auth, courses, assignments, submissions, grades), `services/` (courses, files, grading + undo), `stack.py`, `tree.py`,
+  `access.py` (permission checks), `routers/` (auth, courses, assignments, submissions, grades, topics, results, reports), `services/` (courses, files, grading + undo, results), `stack.py`, `tree.py`, `graph.py`, `scoring.py`, `stats.py`,
   `seed.py`, `create_teacher.py`
 - `backend/tests/`: `conftest.py` has the shared fixtures: `session`, `client`, `make_user`, `auth_header()`, `classroom`, and a temp upload dir
 - `frontend/src/`: `api/client.js` (the only place that calls fetch), `auth/` (AuthContext, ProtectedRoute), `hooks/` (useApi,

@@ -15,6 +15,9 @@ describe("workStatus", () => {
     [{ submissionStatus: "submitted", isLate: true, dueAt: PAST }, "Turned in late"],
     [{ submissionStatus: "submitted", grade: { score: 18 }, dueAt: PAST }, "Graded"],
     [{ submissionStatus: "none", grade: { score: 0 }, dueAt: PAST }, "Graded"], // missing work given 0
+    [{ inClass: true, dueAt: FUTURE }, "In class"], // a midterm before its date
+    [{ inClass: true, dueAt: PAST }, "Waiting for marks"], // never "Missing": there's nothing to hand in
+    [{ inClass: true, grade: { score: 35 }, dueAt: PAST }, "Graded"],
   ])("%o -> %s", (input, expected) => {
     expect(workStatus(input).label).toBe(expected);
   });

@@ -122,8 +122,10 @@ class Enrollment(Base):
 class Assignment(Base):
     __tablename__ = "assignments"
     __table_args__ = (
-        # Only 'assignment' for the MVP; quiz/midterm/project are added later.
-        CheckConstraint("category IN ('assignment')", name="ck_assignments_category"),
+        # The four categories and their fixed weights are in app/scoring.py.
+        CheckConstraint(
+            "category IN ('quiz', 'assignment', 'midterm', 'project')", name="ck_assignments_category"
+        ),
         CheckConstraint("max_points > 0", name="ck_assignments_max_points_positive"),
     )
 
@@ -227,6 +229,25 @@ class Topic(Base):
     children: Mapped[list["Topic"]] = relationship(
         back_populates="parent", cascade="all, delete-orphan", passive_deletes=True
     )
+
+
+class TopicPrerequisite(Base):
+    """An arrow in the prerequisite graph: topic_id needs prerequisite_id learned first.
+
+    Both topics are in the same course (checked in code). Loops such as
+    "A needs B, B needs A" are refused before saving (see app/graph.py).
+    Deleting either topic deletes the arrow.
+    """
+
+    __tablename__ = "topic_prerequisites"
+    __table_args__ = (
+        UniqueConstraint("topic_id", "prerequisite_id", name="uq_topic_prerequisite"),
+        CheckConstraint("topic_id != prerequisite_id", name="ck_topic_prerequisite_not_itself"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    topic_id: Mapped[int] = mapped_column(ForeignKey("topics.id", ondelete="CASCADE"), index=True)
+    prerequisite_id: Mapped[int] = mapped_column(ForeignKey("topics.id", ondelete="CASCADE"))
 
 
 class GradeChange(Base):

@@ -8,11 +8,13 @@ from app.database import get_db
 from app.deps import get_current_user, require_student
 from app.models import Assignment, Grade, Submission, User, utc_now
 from app.schemas import MyWorkRow, SubmissionOut
+from app.scoring import OFFLINE_CATEGORIES
 from app.services.files import UploadRejected, delete_file, save_upload, stored_path
 
 router = APIRouter(tags=["submissions"])
 
 GRADED_LOCKED = "This work has been graded and can no longer be changed."
+IN_CLASS = "This is taken in class, so there is nothing to upload. Your teacher enters the marks."
 
 
 def find_submission(db: Session, assignment_id: int, student_id: int) -> Submission | None:
@@ -42,7 +44,9 @@ def upload_submission(
     db: Session = Depends(get_db),
 ):
     """Upload a file as a draft, or replace the file of an existing draft."""
-    get_assignment_for_member(db, assignment_id, student)  # 404 unless enrolled
+    assignment = get_assignment_for_member(db, assignment_id, student)  # 404 unless enrolled
+    if assignment.category in OFFLINE_CATEGORIES:
+        raise conflict(IN_CLASS)
     if is_graded(db, assignment_id, student.id):
         raise conflict(GRADED_LOCKED)
     submission = find_submission(db, assignment_id, student.id)
@@ -83,7 +87,9 @@ def turn_in_submission(
     assignment_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)
 ):
     """Mark as done: the draft becomes submitted and the time is recorded."""
-    get_assignment_for_member(db, assignment_id, student)
+    assignment = get_assignment_for_member(db, assignment_id, student)
+    if assignment.category in OFFLINE_CATEGORIES:
+        raise conflict(IN_CLASS)
     submission = find_submission(db, assignment_id, student.id)
     if submission is None:
         raise conflict("Upload a file before marking the work as done.")

@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext.jsx";
 import { StudentAssignments, TeacherAssignments } from "../components/CourseAssignments.jsx";
 import ErrorMessage from "../components/ErrorMessage.jsx";
 import Loading from "../components/Loading.jsx";
+import MyResultCard from "../components/MyResultCard.jsx";
 import { JoinCodeBox, Roster } from "../components/TeacherCourseInfo.jsx";
 import useApi from "../hooks/useApi.js";
 import useDocumentTitle from "../hooks/useDocumentTitle.js";
@@ -36,8 +37,31 @@ export default function CoursePage() {
             {course.description && <p className="course-description">{course.description}</p>}
           </header>
 
+          <Link to={`/courses/${courseId}/topics`} className="item-row">
+            <span className="item-main">
+              <span className="item-title">Topics and study order</span>
+              <span className="muted">
+                {user.role === "student"
+                  ? "See what's covered and what to learn first."
+                  : "Organize the course into topics and set what to learn first."}
+              </span>
+            </span>
+            <span aria-hidden="true">→</span>
+          </Link>
+
+          {user.role === "teacher" && (
+            <Link to={`/courses/${courseId}/results`} className="item-row">
+              <span className="item-main">
+                <span className="item-title">Results and reports</span>
+                <span className="muted">Weighted results, letter grades, class statistics and the three reports.</span>
+              </span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          )}
+
           {user.role === "student" ? (
             <>
+              <MyResultCard courseId={courseId} />
               <h2>Assignments</h2>
               <StudentAssignments courseId={courseId} />
             </>

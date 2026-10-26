@@ -87,7 +87,7 @@ def test_other_teacher_cannot_add_to_a_course_they_dont_own(client, world):
         {"due_at": "2020-01-01T10:00:00Z"},  # in the past
         {"due_at": "2030-01-01T10:00:00"},  # no timezone
         {"due_at": "next friday"},
-        {"category": "quiz"},  # can't be chosen yet
+        {"category": "exam"},  # not one of the four categories
         {"course_id": 999},  # comes from the URL only
     ],
 )
@@ -163,6 +163,29 @@ def test_teacher_edits_only_the_fields_sent(client, world):
     assert response.status_code == 200
     assert response.json()["title"] == "Assignment 1 (updated)"
     assert response.json()["max_points"] == 20  # unchanged
+
+
+@pytest.mark.parametrize("field", ["title", "max_points", "due_at"])
+def test_required_fields_cannot_be_emptied_with_null(client, world, field):
+    assignment_id = create(client, world).json()["id"]
+
+    response = client.patch(
+        f"/api/assignments/{assignment_id}", json={field: None}, headers=auth_header(world["teacher"])
+    )
+
+    assert response.status_code == 422
+    assert "cannot be empty" in str(response.json()["detail"])
+
+
+def test_instructions_can_be_cleared_with_null(client, world):
+    assignment_id = create(client, world, instructions="Read chapter 2").json()["id"]
+
+    response = client.patch(
+        f"/api/assignments/{assignment_id}", json={"instructions": None}, headers=auth_header(world["teacher"])
+    )
+
+    assert response.status_code == 200
+    assert response.json()["instructions"] is None
 
 
 def test_student_cannot_edit_an_assignment(client, world):

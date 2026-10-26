@@ -131,6 +131,14 @@ a {
   font: inherit;
 }
 
+.field select {
+  padding: 10px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font: inherit;
+}
+
 .field input:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
@@ -179,6 +187,21 @@ a {
 
 .button-secondary:hover:not(:disabled) {
   background: var(--color-background);
+}
+
+.button-small {
+  padding: 4px var(--space-2);
+  font-size: 0.875rem;
+}
+
+.button-danger {
+  background: var(--color-surface);
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.button-danger:hover:not(:disabled) {
+  background: var(--color-error-bg);
 }
 
 /* ---------- messages ---------- */
@@ -634,12 +657,213 @@ h2 {
   font-weight: 500;
 }
 
+/* ---------- topics ---------- */
+
+.topic-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Subtopics are indented with a line on the left, like folders. */
+.topic-tree .topic-tree {
+  margin-top: var(--space-2);
+  margin-left: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-border);
+}
+
+.topic-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.topic-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.topic-editor .field-row {
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+
+.stack-tight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.prerequisite-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.prerequisite-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px 2px 2px var(--space-2);
+  background: var(--color-info-bg);
+  border-radius: var(--radius);
+}
+
+.topic-add-prerequisite {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.topic-add-prerequisite select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.study-order {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- results and reports ---------- */
+
+/* Wide tables scroll inside their box on small screens, so the page itself never scrolls sideways. */
+.table-wrap {
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table thead th {
+  background: var(--color-background);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.data-table tbody th {
+  font-weight: 500;
+}
+
+.data-table tbody tr:last-child th,
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.result-headline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.result-percent {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.letter {
+  display: inline-block;
+  min-width: 2.25rem;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius);
+  background: var(--color-info-bg);
+  color: var(--color-primary-dark);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.letter-F {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.pass-text {
+  color: var(--color-success);
+  font-weight: 500;
+}
+
+.fail-text {
+  color: var(--color-error);
+  font-weight: 500;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.stat-card {
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.stat-card dd {
+  margin: var(--space-1) 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
 /* ---------- accessibility and polish ---------- */
+
+/* Read by screen readers, but not shown on screen. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 
 /* A clear outline for keyboard users (mouse clicks don't show it). */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible,
 .course-card:focus-visible,
 .item-row:focus-visible {
@@ -757,5 +981,9 @@ h1,
   .grade-form .button,
   .undo-bar .button {
     width: 100%;
+  }
+
+  .topic-editor .field-row {
+    grid-template-columns: 1fr;
   }
 }

@@ -3,6 +3,7 @@ import { Link } from "react-router";
 
 import { api } from "../api/client.js";
 import useApi from "../hooks/useApi.js";
+import { categoryInfo, isInClass } from "../utils/categories.js";
 import { formatDateTime } from "../utils/dates.js";
 import AssignmentForm from "./AssignmentForm.jsx";
 import EmptyState from "./EmptyState.jsx";
@@ -30,7 +31,9 @@ export function StudentAssignments({ courseId }) {
           <Link to={`/assignments/${assignment.id}`} className="item-row">
             <span className="item-main">
               <span className="item-title">{assignment.title}</span>
-              <span className="muted">Due {formatDateTime(assignment.due_at)}</span>
+              <span className="muted">
+                {categoryInfo(assignment.category).label} · Due {formatDateTime(assignment.due_at)}
+              </span>
             </span>
             <span className="item-side">
               {grade && (
@@ -43,6 +46,7 @@ export function StudentAssignments({ courseId }) {
                 isLate={is_late}
                 grade={grade}
                 dueAt={assignment.due_at}
+                inClass={isInClass(assignment.category)}
               />
             </span>
           </Link>
@@ -89,7 +93,9 @@ export function TeacherAssignments({ courseId }) {
               <Link to={`/assignments/${assignment.id}`} className="item-row">
                 <span className="item-main">
                   <span className="item-title">{assignment.title}</span>
-                  <span className="muted">Due {formatDateTime(assignment.due_at)}</span>
+                  <span className="muted">
+                    {categoryInfo(assignment.category).label} · Due {formatDateTime(assignment.due_at)}
+                  </span>
                 </span>
                 <span className="muted">{assignment.max_points} points</span>
               </Link>

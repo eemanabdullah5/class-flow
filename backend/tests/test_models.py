@@ -4,7 +4,17 @@ import pytest
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 
-from app.models import Assignment, Course, Enrollment, Grade, GradeChange, Submission, User
+from app.models import (
+    Assignment,
+    Course,
+    Enrollment,
+    Grade,
+    GradeChange,
+    Submission,
+    Topic,
+    TopicPrerequisite,
+    User,
+)
 
 # ---------- helpers that build valid rows; each test changes one thing ----------
 
@@ -151,9 +161,18 @@ def test_assignment_max_points_must_be_positive(session, setup):
         make_assignment(session, course, max_points=0)
 
 
-def test_only_assignment_category_is_allowed_for_now(session, setup):
+@pytest.mark.parametrize("category", ["quiz", "assignment", "midterm", "project"])
+def test_the_four_categories_are_allowed(session, setup, category):
     assignment = setup[3]
-    assignment.category = "quiz"
+    assignment.category = category
+    session.commit()
+
+    assert assignment.category == category
+
+
+def test_other_categories_are_rejected(session, setup):
+    assignment = setup[3]
+    assignment.category = "exam"
 
     with pytest.raises(IntegrityError):
         session.commit()
@@ -302,6 +321,33 @@ def test_deleting_assignment_deletes_its_grade_changes(session, setup):
     assert count(session, GradeChange) == 0
     assert count(session, User) == 2
 
+
+# ---------- topic prerequisites ----------
+
+
+def two_topics(session, course):
+    first, second = Topic(course_id=course.id, title="Variables"), Topic(course_id=course.id, title="Loops")
+    session.add_all([first, second])
+    session.commit()
+    return first, second
+
+
+def test_topic_cannot_be_its_own_prerequisite_in_the_database(session, setup):
+    topic, _ = two_topics(session, setup[2])
+
+    with pytest.raises(IntegrityError):
+        session.add(TopicPrerequisite(topic_id=topic.id, prerequisite_id=topic.id))
+        session.commit()
+
+
+def test_same_prerequisite_arrow_cannot_be_saved_twice(session, setup):
+    variables, loops = two_topics(session, setup[2])
+    session.add(TopicPrerequisite(topic_id=loops.id, prerequisite_id=variables.id))
+    session.commit()
+
+    with pytest.raises(IntegrityError):
+        session.add(TopicPrerequisite(topic_id=loops.id, prerequisite_id=variables.id))
+        session.commit()
 
 # ---------- UTC date-times ----------
 

@@ -82,6 +82,9 @@ def test_png_is_accepted(client, classroom):
         ("homework.pdf", b"", 422),  # empty
         ("homework.pdf", b"%PDF-" + b"0" * MAX_UPLOAD_BYTES, 413),  # just over 10 MB
     ],
+    # Short names for each case. Without them pytest builds the name from the data, and the
+    # 10 MB case gets a name too long for Windows (tests crash there with "environment variable is too long").
+    ids=["exe", "exe-renamed-to-pdf", "pdf-named-png", "txt", "empty", "over-10-mb"],
 )
 def test_bad_files_are_rejected_and_nothing_is_kept(
     client, classroom, temporary_upload_dir, filename, data, expected_status

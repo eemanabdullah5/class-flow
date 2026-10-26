@@ -23,6 +23,9 @@ npm run dev
   `teacher@example.com`, `student1@example.com` (enrolled in course 1), `student2@example.com`
 - Course 1 join code: `sqlite3 classflow.db "SELECT id, join_code FROM courses;"` (run in `backend/`)
 - In `/docs`, any `{something}` in a path (e.g. `course_id`) has its own box in **Parameters**. Fill it in before **Execute**.
+- **Database made before Phase 9?** Its old rule only allows the category "assignment", and `create_all()` never changes
+  existing tables. Stop the server, delete `backend/classflow.db` (and the files in `backend/uploads/`), run
+  `python -m app.seed` again, then start the server.
 
 ---
 
@@ -33,7 +36,7 @@ As **teacher**:
   `{"title": "Assignment 1: Calculator", "instructions": "Write a calculator.", "max_points": 20, "due_at": "2026-11-30T23:59:00+05:00"}`
   → **201**, `due_at` shows `2026-11-30T18:59:00Z` (converted to UTC)
 - [ ] Create a second one due sooner (`2026-11-05T23:59:00+05:00`) → list `GET /api/courses/1/assignments` shows it **first**
-- [ ] Each of these gives **422**: due date in the past · no timezone (`2026-11-30T23:59:00`) · `max_points: 0` · extra `"category": "quiz"`
+- [ ] Each of these gives **422**: due date in the past · no timezone (`2026-11-30T23:59:00`) · `max_points: 0` · `"category": "exam"` (not one of the four)
 - [ ] `PATCH /api/assignments/1` with `{"title": "New title"}` → **200**, other fields unchanged
 
 As **student1**:
@@ -174,6 +177,59 @@ Log in as the teacher and open an assignment where `student1` has turned in work
       log in as them → "No grade changes to undo." even right after the first teacher graded
 - [ ] In `/docs` as a student: `GET /api/grades/undo` and `POST /api/grades/undo` → **403**; with no login → **401**
 
-## 10. Later phases
+## 10. Topics and prerequisites (Phase 8), in the app at :5173
+
+As the teacher, open a course → **Topics and study order**.
+- [ ] No topics yet → "No topics yet. Add the first topic above."; the Study order section isn't shown
+- [ ] **Add topic** with an empty title → "Enter a topic title." and nothing is added
+- [ ] Add **Python basics**; then choose it in **Put inside** and add **Variables**, **Loops**, **Functions** → they appear indented under it
+- [ ] Inside **Loops**, add **For loops** → two levels deep; add a top-level **Files**
+- [ ] **Edit** Loops → rename to "Loops and ranges" → **Save** → the new name shows in the tree and the study order
+- [ ] **Edit** Python basics → **Put inside** doesn't list Python basics or any of its subtopics (only Top level and Files)
+- [ ] **Edit** For loops → Put inside **Files** → Save → it moves with nothing lost · move it back to **Top level** → it's at the top
+- [ ] **Edit** Loops → add prerequisite **Variables** → tree shows "Needs: Variables"; study order lists Variables before Loops
+- [ ] **Edit** Functions → add **Loops** and **Variables** → allowed (a diamond, not a loop)
+- [ ] **Edit** Variables → add **Functions** → red box: 'That would make a loop: "Variables" needs "Functions" needs … "Variables".' and nothing changes
+- [ ] **Remove** a prerequisite → "Needs:" line updates; the reverse arrow is now allowed
+- [ ] **Delete topic** on Python basics → the confirm box says how many subtopics go with it · **Cancel** → nothing happens · **OK** → it and its subtopics are gone, and their prerequisite arrows too
+- [ ] As the enrolled student: the course page has the **Topics and study order** link; the tree and study order show, with no Add form or Edit buttons
+- [ ] As `student2` (not enrolled): open `/courses/1/topics` directly → "Course not found."
+- [ ] Phone width: the topic editor's fields stack and nothing scrolls sideways
+- [ ] In `/docs` as a student: `POST /api/courses/1/topics` → **403**; as another teacher → **404**
+
+## 11. Weighted results, letter grades, stats and reports (Phase 9)
+
+Setup: as the teacher, create one of each category in a course with **two enrolled students** (register a second student
+and join with the code): Quiz (10 pts), Assignment (20 pts), Midterm (50 pts), Project (100 pts). Give them due dates in
+the near future (a few minutes ahead), so that some can pass while you test.
+
+Categories and in-class work:
+- [ ] **+ New assignment** → the **Category** dropdown lists Quiz 10%, Assignment 10%, Midterm 30% (taken in class), Project 50%
+- [ ] Lists and the assignment page show the category, e.g. "Quiz · Due …"; the midterm page says "Midterm · In class …"
+- [ ] As a student, open the midterm → **Your mark** with "This is taken in class…", no file upload, badge **In class**
+- [ ] As the teacher, open the midterm → each row says "Taken in class: enter the mark below." and has no Download
+- [ ] Teacher enters a midterm mark **before** its date → saved (in-class work doesn't wait for a hand-in)
+- [ ] An assignment a student uploaded a file to → **Edit** → Category **Midterm** → "Students have already uploaded work…"
+
+My result (student):
+- [ ] Before anything is graded or due → "No result yet…"
+- [ ] Student A: quiz **8/10**, assignment handed in and graded **15/20**, midterm **35/50** → **73% B, Passing**;
+      the table shows Quiz 8 / 10 · 80%, Project "–"
+- [ ] Student B: quiz past due with nothing handed in → it counts as **0/10** → **0% F, "Not passing yet (50% needed)"**;
+      hand in the assignment late without a grade → it doesn't count yet (still "–")
+- [ ] Give student B quiz 5/10 → their result changes to 50% **D, Passing** (exactly 50% passes)
+
+Results and reports page (teacher → course page → **Results and reports**):
+- [ ] **Class statistics:** count, average, lowest, highest, variance (population) and % passing match your numbers
+- [ ] **Course results:** one row per student with each category %, overall, letter and Yes/No; the letter scale is listed
+- [ ] **Report 1:** each assignment with turned in / late / missing / graded and average, lowest–highest; midterm missing says "in class"
+- [ ] **Report 2:** each student's handed-in, late and graded counts, and points of graded work (e.g. 58 / 80)
+- [ ] **Report 3:** missing (nothing or only a draft after the deadline) and late work; the assignment link opens it;
+      grade the missing quiz with 0 → it leaves the list
+- [ ] As student1, go to `/courses/1/results` → sent back to the dashboard; in `/docs` the results/report endpoints give **403**,
+      and **404** for another teacher
+- [ ] Phone width: the wide tables scroll inside their box; the page itself doesn't scroll sideways
+
+## 12. Later phases
 
 Steps are added here as each phase is finished.
