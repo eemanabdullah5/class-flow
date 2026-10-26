@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import select
 
+from app.models import Grade, GradeChange
 from tests.conftest import auth_header
 
 PDF = b"%PDF-1.4\npretend homework\n"
@@ -43,6 +45,11 @@ def my_grade(client, classroom, user_key="student"):
         f"/api/assignments/{classroom['assignment'].id}/my-grade",
         headers=auth_header(classroom[user_key]),
     )
+
+
+def recorded_changes(session):
+    """Every grade change written down for undo, oldest first."""
+    return session.scalars(select(GradeChange).order_by(GradeChange.id)).all()
 
 
 def move_due_date_to_the_past(session, classroom):
@@ -210,3 +217,83 @@ def test_grade_is_null_before_grading(client, classroom):
 
 def test_outsider_cannot_ask_for_a_grade(client, classroom):
     assert my_grade(client, classroom, user_key="outsider").status_code == 404
+
+
+# ---------- recording changes for undo ----------
+
+
+def test_first_grade_is_recorded_with_no_old_score(client, session, classroom):
+    upload(client, classroom)
+    turn_in(client, classroom)
+    grade(client, classroom, score=18, feedback="Nice job")
+
+    [change] = recorded_changes(session)
+    assert change.assignment_id == classroom["assignment"].id
+    assert change.student_id == classroom["student"].id
+    assert change.teacher_id == classroom["teacher"].id
+    assert (change.old_score, change.old_feedback, change.old_graded_at) == (None, None, None)
+    assert change.new_score == 18
+    assert change.undone is False
+
+
+def test_regrading_records_the_previous_grade(client, session, classroom):
+    upload(client, classroom)
+    turn_in(client, classroom)
+    grade(client, classroom, score=12, feedback="First try")
+    first_graded_at = session.scalars(select(Grade)).one().graded_at
+
+    grade(client, classroom, score=15, feedback="Re-marked")
+
+    first, second = recorded_changes(session)
+    assert first.old_score is None
+    assert (second.old_score, second.old_feedback, second.new_score) == (12, "First try", 15)
+    assert second.old_graded_at == first_graded_at
+
+
+def test_each_regrade_is_recorded_in_order(client, session, classroom):
+    upload(client, classroom)
+    turn_in(client, classroom)
+    for score in [10, 14, 17]:
+        grade(client, classroom, score=score)
+
+    changes = recorded_changes(session)
+    assert [(c.old_score, c.new_score) for c in changes] == [(None, 10), (10, 14), (14, 17)]
+
+
+def test_saving_the_same_grade_again_is_not_recorded(client, session, classroom):
+    upload(client, classroom)
+    turn_in(client, classroom)
+    grade(client, classroom, score=18, feedback="Nice job")
+
+    response = grade(client, classroom, score=18, feedback="Nice job")
+
+    assert response.status_code == 200
+    assert len(recorded_changes(session)) == 1
+
+
+def test_changing_only_the_feedback_is_recorded(client, session, classroom):
+    upload(client, classroom)
+    turn_in(client, classroom)
+    grade(client, classroom, score=18, feedback="Nice job")
+
+    grade(client, classroom, score=18, feedback="Nice job, but cite your sources")
+
+    second = recorded_changes(session)[1]
+    assert (second.old_score, second.old_feedback) == (18, "Nice job")
+
+
+@pytest.mark.parametrize(
+    "changes, expected_status",
+    [
+        (dict(user_key="classmate"), 403),  # a student
+        (dict(user_key="other_teacher"), 404),  # a teacher outside the course
+        (dict(student_key="outsider"), 404),  # a student outside the course
+        (dict(score=100), 422),  # more than max points
+    ],
+)
+def test_refused_grading_records_nothing(client, session, classroom, changes, expected_status):
+    upload(client, classroom)
+    turn_in(client, classroom)
+
+    assert grade(client, classroom, **changes).status_code == expected_status
+    assert recorded_changes(session) == []
