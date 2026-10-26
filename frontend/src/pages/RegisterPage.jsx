@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { useAuth } from "../auth/AuthContext.jsx";
 import ErrorMessage from "../components/ErrorMessage.jsx";
 import FormField from "../components/FormField.jsx";
+import useDocumentTitle from "../hooks/useDocumentTitle.js";
 
 // Same limits as the backend (bcrypt only uses the first 72 bytes).
 const MIN_PASSWORD = 8;
@@ -25,6 +26,7 @@ function validate({ fullName, email, password, confirmPassword }) {
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  useDocumentTitle("Create account");
 
   const [form, setForm] = useState({ fullName: "", email: "", password: "", confirmPassword: "" });
   const [fieldErrors, setFieldErrors] = useState({});

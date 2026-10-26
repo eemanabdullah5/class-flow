@@ -2,8 +2,10 @@ import { api } from "../api/client.js";
 import CourseList from "../components/CourseList.jsx";
 import CreateCourseForm from "../components/CreateCourseForm.jsx";
 import useApi from "../hooks/useApi.js";
+import useDocumentTitle from "../hooks/useDocumentTitle.js";
 
 export default function TeacherDashboard() {
+  useDocumentTitle("Courses I teach");
   const { data: courses, loading, error, reload } = useApi(() => api.get("/api/courses"));
 
   return (

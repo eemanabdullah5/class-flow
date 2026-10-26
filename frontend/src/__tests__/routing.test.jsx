@@ -98,4 +98,20 @@ describe("routing and protection", () => {
     expect(await screen.findByText("You have been logged out.")).toBeInTheDocument();
     expect(tokenStorage.get()).toBeNull();
   });
+
+  it("names the browser tab after the page", async () => {
+    backendFor(STUDENT);
+    renderApp("/student", { loggedInAs: STUDENT });
+
+    await screen.findByRole("heading", { name: "My courses" });
+    expect(document.title).toBe("My courses · ClassFlow");
+  });
+
+  it("has a Dashboard link and a skip link for keyboard users", async () => {
+    backendFor(TEACHER);
+    renderApp("/no-such-page", { loggedInAs: TEACHER });
+
+    expect(await screen.findByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/teacher");
+    expect(screen.getByRole("link", { name: "Skip to main content" })).toHaveAttribute("href", "#main-content");
+  });
 });

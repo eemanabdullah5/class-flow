@@ -146,6 +146,17 @@ Full workflow (two browsers, or one normal window plus one private window, so bo
 - [ ] Teacher changes it to **19** → **Update grade** → student sees 19
 - [ ] A student with a **Draft** (uploaded, not marked done) before the deadline → teacher's save shows "still a draft…"
 
-## 8. Later phases
+## 8. Polish (Phase 6, step 5), in the app at :5173
+
+- [ ] Browser tabs show the page name, e.g. "Programming Fundamentals · ClassFlow", plus the blue "C" icon
+- [ ] Navbar has a **Dashboard** link that's underlined while you're on the dashboard
+- [ ] Press **Tab** once on any page → a blue "Skip to main content" button appears top-left; Enter jumps past the navbar
+- [ ] Keep pressing Tab → every link, button and input shows a clear blue outline, and nothing is skipped
+- [ ] Course cards and assignment rows can be opened with Tab + Enter
+- [ ] Register with a very long name and upload a file with a very long filename → text wraps, no sideways scrolling
+- [ ] Phone width (Inspect → device toolbar → iPhone SE): navbar fits, forms are full width, grade form fields stack, join code box wraps
+- [ ] macOS System Settings → Accessibility → Display → **Reduce motion** on → the loading spinner stops spinning
+
+## 9. Later phases
 
 Steps are added here as each phase is finished.

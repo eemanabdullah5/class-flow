@@ -1,6 +1,9 @@
 import { Link } from "react-router";
 
+import useDocumentTitle from "../hooks/useDocumentTitle.js";
+
 export default function NotFoundPage() {
+  useDocumentTitle("Page not found");
   return (
     <main className="page">
       <div className="card">

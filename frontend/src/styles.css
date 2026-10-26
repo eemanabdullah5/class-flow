@@ -617,6 +617,81 @@ h2 {
   font-weight: 500;
 }
 
+/* ---------- accessibility and polish ---------- */
+
+/* A clear outline for keyboard users (mouse clicks don't show it). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+.course-card:focus-visible,
+.item-row:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+#main-content:focus {
+  outline: none;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: -100px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius);
+  z-index: 10;
+}
+
+.skip-link:focus {
+  top: var(--space-2);
+}
+
+.navbar {
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.nav-link {
+  color: var(--color-muted);
+  text-decoration: none;
+  font-weight: 500;
+  padding: var(--space-1) 0;
+  border-bottom: 2px solid transparent;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* Long names, titles and filenames wrap instead of pushing the page sideways. */
+h1,
+.course-title,
+.item-title,
+.file-row span,
+.grade-row strong,
+.roster li span,
+.navbar-name {
+  overflow-wrap: anywhere;
+}
+
+/* People who turn off animations in their system settings don't get a spinning icon. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
 /* ---------- small screens ---------- */
 
 @media (max-width: 600px) {
@@ -641,5 +716,28 @@ h2 {
 
   .join-code-box {
     flex-wrap: wrap;
+  }
+
+  .navbar-left {
+    gap: var(--space-3);
+  }
+
+  .page {
+    padding: var(--space-3);
+  }
+
+  .course-header,
+  .card {
+    padding: var(--space-3);
+  }
+
+  .grade-form,
+  .grade-form .field,
+  .grade-form .field:first-child input {
+    width: 100%;
+  }
+
+  .grade-form .button {
+    width: 100%;
   }
 }

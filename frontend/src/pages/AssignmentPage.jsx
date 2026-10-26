@@ -9,6 +9,7 @@ import Loading from "../components/Loading.jsx";
 import StudentWorkPanel from "../components/StudentWorkPanel.jsx";
 import TeacherGradingPanel from "../components/TeacherGradingPanel.jsx";
 import useApi from "../hooks/useApi.js";
+import useDocumentTitle from "../hooks/useDocumentTitle.js";
 import { formatDateTime } from "../utils/dates.js";
 
 // Shared by students and teachers. Students get their own "Your work" panel;
@@ -21,6 +22,7 @@ export default function AssignmentPage() {
     () => api.get(`/api/assignments/${assignmentId}`),
     [assignmentId],
   );
+  useDocumentTitle(assignment?.title);
 
   if (loading && !assignment) {
     return (

@@ -4,9 +4,11 @@ import { Link } from "react-router";
 import { useAuth } from "../auth/AuthContext.jsx";
 import ErrorMessage from "../components/ErrorMessage.jsx";
 import FormField from "../components/FormField.jsx";
+import useDocumentTitle from "../hooks/useDocumentTitle.js";
 
 export default function LoginPage() {
   const { login, notice } = useAuth(); // notice: e.g. "Your session has expired..."
+  useDocumentTitle("Log in");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

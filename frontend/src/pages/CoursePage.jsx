@@ -7,6 +7,7 @@ import ErrorMessage from "../components/ErrorMessage.jsx";
 import Loading from "../components/Loading.jsx";
 import { JoinCodeBox, Roster } from "../components/TeacherCourseInfo.jsx";
 import useApi from "../hooks/useApi.js";
+import useDocumentTitle from "../hooks/useDocumentTitle.js";
 
 // Shared by students and teachers; each sees their own version of the assignment list.
 export default function CoursePage() {
@@ -16,6 +17,7 @@ export default function CoursePage() {
     () => api.get(`/api/courses/${courseId}`),
     [courseId],
   );
+  useDocumentTitle(course?.title);
 
   return (
     <main className="page stack">

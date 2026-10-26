@@ -27,33 +27,36 @@ export default function App() {
   return (
     <>
       <NavBar />
-      <Routes>
-        {/* Only for logged-out visitors */}
-        <Route element={<GuestRoute />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
+      {/* The "Skip to main content" link jumps here. */}
+      <div id="main-content" tabIndex={-1}>
+        <Routes>
+          {/* Only for logged-out visitors */}
+          <Route element={<GuestRoute />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
 
-        {/* Any logged-in user */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<RoleHome />} />
-          {/* Shared pages: the backend decides what each person may see */}
-          <Route path="/courses/:courseId" element={<CoursePage />} />
-          <Route path="/assignments/:assignmentId" element={<AssignmentPage />} />
-        </Route>
+          {/* Any logged-in user */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<RoleHome />} />
+            {/* Shared pages: the backend decides what each person may see */}
+            <Route path="/courses/:courseId" element={<CoursePage />} />
+            <Route path="/assignments/:assignmentId" element={<AssignmentPage />} />
+          </Route>
 
-        {/* Students only */}
-        <Route element={<ProtectedRoute role="student" />}>
-          <Route path="/student" element={<StudentDashboard />} />
-        </Route>
+          {/* Students only */}
+          <Route element={<ProtectedRoute role="student" />}>
+            <Route path="/student" element={<StudentDashboard />} />
+          </Route>
 
-        {/* Teachers only */}
-        <Route element={<ProtectedRoute role="teacher" />}>
-          <Route path="/teacher" element={<TeacherDashboard />} />
-        </Route>
+          {/* Teachers only */}
+          <Route element={<ProtectedRoute role="teacher" />}>
+            <Route path="/teacher" element={<TeacherDashboard />} />
+          </Route>
 
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </div>
     </>
   );
 }
