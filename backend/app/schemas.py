@@ -209,6 +209,17 @@ class GradeOut(BaseModel):
     graded_at: datetime
 
 
+class GradeUndoPreview(BaseModel):
+    """What undo would do (or just did), e.g. "Sara Ahmed: 18 -> no grade"."""
+
+    assignment_id: int
+    assignment_title: str
+    student_id: int
+    student_name: str
+    from_score: float  # the grade before undo
+    to_score: float | None  # the grade after undo; None means "no grade"
+
+
 class StudentWorkRow(BaseModel):
     """One row of the teacher's list: an enrolled student and where their work stands."""
 

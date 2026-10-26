@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 from app.access import get_assignment_for_member, get_assignment_for_owner, is_enrolled
 from app.database import get_db
 from app.deps import require_student, require_teacher
-from app.models import Enrollment, Grade, Submission, User, utc_now
-from app.schemas import GradeOut, GradeSet, StudentWorkRow
-from app.services.grading import set_grade
+from app.models import Enrollment, Grade, GradeChange, Submission, User, utc_now
+from app.schemas import GradeOut, GradeSet, GradeUndoPreview, StudentWorkRow
+from app.services.grading import load_undo_stack, set_grade, undo_last_change
 
 router = APIRouter(tags=["grades"])
 
@@ -93,3 +93,30 @@ def read_my_grade(
     return db.scalars(
         select(Grade).where(Grade.assignment_id == assignment_id, Grade.student_id == student.id)
     ).first()
+
+
+def describe_undo(change: GradeChange) -> GradeUndoPreview:
+    return GradeUndoPreview(
+        assignment_id=change.assignment_id,
+        assignment_title=change.assignment.title,
+        student_id=change.student_id,
+        student_name=change.student.full_name,
+        from_score=change.new_score,
+        to_score=change.old_score,
+    )
+
+
+@router.get("/api/grades/undo", response_model=GradeUndoPreview | None)
+def preview_undo(teacher: User = Depends(require_teacher), db: Session = Depends(get_db)):
+    """What "undo" would do right now, or null if there is nothing to undo. Changes nothing."""
+    stack = load_undo_stack(db, teacher)
+    return None if stack.is_empty() else describe_undo(stack.peek())
+
+
+@router.post("/api/grades/undo", response_model=GradeUndoPreview)
+def undo_grade_change(teacher: User = Depends(require_teacher), db: Session = Depends(get_db)):
+    """Undo this teacher's newest grade change. Pressing it again goes back one more step."""
+    change = undo_last_change(db, teacher)
+    if change is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nothing to undo.")
+    return describe_undo(change)

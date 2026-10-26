@@ -31,7 +31,8 @@ checks to `docs/manual-testing.md`** (next free section) instead of asking them 
 
 - New `GradeChange` model/table (`grade_changes`): submission/assignment + student, `teacher_id`, `old_score` (nullable = "no grade"),
   `old_feedback`, `new_score`, `changed_at`, `undone` flag.
-- `app/services/grading.py::set_grade()` is the **only** place grades change, so it pushes the old value onto the stack there.
+- `app/services/grading.py::set_grade()` is the only place teachers' grade changes happen, so it records the old value there
+  (skipped when score and feedback are unchanged). `undo_last_change()` restores grades directly, never via `set_grade()`, so undo isn't recorded (no redo).
 - A pure, separately tested stack logic piece (push/pop/peek, LIFO).
 - `POST /api/grades/undo` (pop the teacher's latest not-undone change and restore the old value; old "no grade" deletes the grade,
   which unlocks the submission) and `GET /api/grades/undo` (preview what undo would do). **One transaction.**
